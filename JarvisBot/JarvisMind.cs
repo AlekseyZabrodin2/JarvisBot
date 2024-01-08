@@ -15,6 +15,7 @@ namespace JarvisBot
     {        
         private static TelegramBotClient _botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
         private static readonly ChatId _userChatId = new (TelegramBotConfiguration.LoadChatIdConfiguration());
+        private static User _botClientUsername = new();
 
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static CommunicationMethods _communicationMethods = new();
@@ -37,8 +38,9 @@ namespace JarvisBot
 
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
 
-            var me = await _botClient.GetMeAsync();
-            Console.WriteLine($"Start listening for @{me.Username}");
+            _botClientUsername = await _botClient.GetMeAsync();
+            Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
+            _logger.Info($"Start listening for @{_botClientUsername.Username}");
 
             using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
             {
@@ -73,9 +75,7 @@ namespace JarvisBot
                 return;
             }
 
-            await _communicationMethods.HandleGreetingAsync(botClient, message);
-            await _communicationMethods.HandleMenuAsync(botClient, message);
-            await _communicationMethods.HandleCurrencyAsync(botClient, message);
+            await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername);           
         }
 
         private static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -92,8 +92,7 @@ namespace JarvisBot
         }
 
 
-
-
+        
 
         private static void OnProcessExit(object sender, EventArgs e)
         {
