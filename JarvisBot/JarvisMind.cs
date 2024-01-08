@@ -12,12 +12,12 @@ using Telegram.Bot.Types.ReplyMarkups;
 namespace JarvisBot
 {
     class JarvisMind
-    {
-        private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
-
+    {        
         private static TelegramBotClient _botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
         private static readonly ChatId _userChatId = new (TelegramBotConfiguration.LoadChatIdConfiguration());
         
+        private static JarvisKeyboardButtons _keyboardButtons = new();
+        private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
 
         //[DllImport("kernel32.dll")]
@@ -49,7 +49,7 @@ namespace JarvisBot
                     return;
                 }
 
-                _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: GetButtons());
+                _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
 
                 _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
                 
@@ -104,7 +104,7 @@ namespace JarvisBot
             if (message.Text.Contains("Меню", StringComparison.CurrentCultureIgnoreCase) ||
                 message.Text.Contains("Menu", StringComparison.CurrentCultureIgnoreCase))
             {
-                await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose", replyMarkup: GetButtons());
+                await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose", replyMarkup: _keyboardButtons.GetMenuButtons());
             }
         }
 
@@ -112,38 +112,8 @@ namespace JarvisBot
         {
             if (message.Text.Contains("Курсы валют", StringComparison.CurrentCultureIgnoreCase))
             {
-                await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту", replyMarkup: GetMoneyButtons());
+                await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту", replyMarkup: _keyboardButtons.GetMoneyButtons());
             }
-        }
-
-
-
-
-
-        private static IReplyMarkup GetButtons()
-        {
-            ReplyKeyboardMarkup replyKeyboard = new(new[]
-                {
-                    new KeyboardButton[] {"Help", "Курсы валют"},
-                    new KeyboardButton[] {"Help", "Курсы валют"},
-                })
-            {
-                ResizeKeyboard = true
-            };
-            return replyKeyboard;
-        }
-
-        private static IReplyMarkup GetMoneyButtons()
-        {
-            ReplyKeyboardMarkup replyKeyboard = new(new[]
-                {
-                    new KeyboardButton[] {"US", "RUS"},
-                    new KeyboardButton[] {"EUR", "CHN"},
-                })
-            {
-                ResizeKeyboard = true
-            };
-            return replyKeyboard;
         }
 
 
@@ -154,8 +124,5 @@ namespace JarvisBot
             _logger.Info("Для меня честь быть с Вами");
             _botClient.SendTextMessageAsync(_userChatId, "Для меня честь быть с Вами");
         }
-
-
-
     }
 }
