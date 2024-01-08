@@ -15,8 +15,9 @@ namespace JarvisBot
     {        
         private static TelegramBotClient _botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
         private static readonly ChatId _userChatId = new (TelegramBotConfiguration.LoadChatIdConfiguration());
-        
+
         private static JarvisKeyboardButtons _keyboardButtons = new();
+        private static CommunicationMethods _communicationMethods = new();
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
 
@@ -72,9 +73,9 @@ namespace JarvisBot
                 return;
             }
 
-            await HandleGreetingAsync(botClient, message);
-            await HandleMenuAsync(botClient, message);
-            await HandleCurrencyAsync(botClient, message);
+            await _communicationMethods.HandleGreetingAsync(botClient, message);
+            await _communicationMethods.HandleMenuAsync(botClient, message);
+            await _communicationMethods.HandleCurrencyAsync(botClient, message);
         }
 
         private static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -90,31 +91,6 @@ namespace JarvisBot
             return Task.CompletedTask;
         }
 
-
-        private static async Task HandleGreetingAsync(ITelegramBotClient botClient, Message message)
-        {
-            if (message.Text.Contains("Привет", StringComparison.CurrentCultureIgnoreCase))
-            {
-                await botClient.SendTextMessageAsync(message.Chat.Id, "Privet");
-            }
-        }
-
-        private static async Task HandleMenuAsync(ITelegramBotClient botClient, Message message)
-        {
-            if (message.Text.Contains("Меню", StringComparison.CurrentCultureIgnoreCase) ||
-                message.Text.Contains("Menu", StringComparison.CurrentCultureIgnoreCase))
-            {
-                await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose", replyMarkup: _keyboardButtons.GetMenuButtons());
-            }
-        }
-
-        private static async Task HandleCurrencyAsync(ITelegramBotClient botClient, Message message)
-        {
-            if (message.Text.Contains("Курсы валют", StringComparison.CurrentCultureIgnoreCase))
-            {
-                await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту", replyMarkup: _keyboardButtons.GetMoneyButtons());
-            }
-        }
 
 
 
