@@ -3,9 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using JarvisBot.Exchange;
 using Telegram.Bot.Types;
 using Telegram.Bot;
 using NLog;
+using Newtonsoft.Json;
+using System.IO;
+using System.Net;
+using Telegram.Bot.Exceptions;
+using JarvisBot.Weather;
 
 namespace JarvisBot
 {
@@ -22,6 +28,8 @@ namespace JarvisBot
             await HandleGreetingAsync(botClient, message);
             await HandleMenuAsync(botClient, message);
             await HandleCurrencyAsync(botClient, message);
+            await HandleUsaRatesAsync(botClient, message);
+            await HandleWeatherAsync(botClient, message);
 
             WriteBotMessage(botUsername, _botMessage);
         }
@@ -49,6 +57,24 @@ namespace JarvisBot
             if (message.Text.Contains("Курсы валют", StringComparison.CurrentCultureIgnoreCase))
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту", replyMarkup: _keyboardButtons.GetMoneyButtons());
+            }
+        }
+
+        public async Task HandleUsaRatesAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text == "USD")
+            {
+                var rateMessage = ExchangeRate.RatesResponse();
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
+            }
+        }
+
+        public async Task HandleWeatherAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text == "Погода")
+            {
+                var weatuerMessage = WeatherLoder.LoadWeather();
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
             }
         }
 
