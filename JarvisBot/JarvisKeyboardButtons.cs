@@ -16,7 +16,7 @@ namespace JarvisBot
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
                     new KeyboardButton[] {"Help", "Курсы валют"},
-                    new KeyboardButton[] {"Help", "Курсы валют"},
+                    new KeyboardButton[] {"Help", "Погода"},
                 })
             {
                 ResizeKeyboard = true
@@ -28,7 +28,7 @@ namespace JarvisBot
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] {"US", "RUS"},
+                    new KeyboardButton[] {"USD", "RUS"},
                     new KeyboardButton[] {"EUR", "CHN"},
                 })
             {
