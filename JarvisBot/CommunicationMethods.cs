@@ -73,7 +73,7 @@ namespace JarvisBot
         {
             if (message.Text == "Погода")
             {
-                var weatuerMessage = WeatherLoder.LoadWeather();
+                var weatuerMessage = WeatherLoder.WeatherResponse();
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
             }
         }

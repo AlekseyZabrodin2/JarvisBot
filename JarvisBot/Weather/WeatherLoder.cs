@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace JarvisBot.Weather
@@ -11,11 +13,37 @@ namespace JarvisBot.Weather
     public class WeatherLoder
     {
 
+        private static WeatherBaseModel _weatherBaseModel = new();
 
 
 
+        public static async Task<string> WeatherResponse()
+        {
+            string rateResponse = null;
+            try
+            {
+                var apiResponse = await LoadWeather();
 
-        public static async Task<string> LoadWeather()
+                foreach (var item in apiResponse.Forecast.Parts)
+                {
+                    rateResponse = $" Текущая температура: {apiResponse.Fact.Temp}°C" +
+                    $"\r\n Минимальная температура: {item.TempMin}°C" +
+                    $"\r\n Максимальная температура: {item.TempMax}°C" +
+                    $"\r\n Средняя температура: {item.TempAvg}°C" +
+                    $"\r\n Ощущается как: {item.FeelsLike}°C" +
+                    $"\r\n Скорость ветра: {apiResponse.Fact.WindSpeed} м/с";
+                }
+
+                return rateResponse;
+            }
+            catch (WebException ex)
+            {
+                Console.WriteLine("Возникло исключение");
+                throw;
+            }
+        }
+
+        public static async Task<WeatherBaseModel> LoadWeather()
         {
             string responseData = null;
 
@@ -44,7 +72,10 @@ namespace JarvisBot.Weather
                     if (response.IsSuccessStatusCode)
                     {
                         responseData = await response.Content.ReadAsStringAsync();
-                        Console.WriteLine(responseData);
+                        Console.WriteLine($"Weather response - {responseData}");
+
+                        WeatherBaseModel apiResponse = JsonSerializer.Deserialize<WeatherBaseModel>(responseData);
+                        _weatherBaseModel = apiResponse;
                     }
                     else
                     {
@@ -56,7 +87,7 @@ namespace JarvisBot.Weather
                     Console.WriteLine($"Возникло исключение: {ex.Message}");
                 }
 
-                return responseData;
+                return _weatherBaseModel;
             }
         }
 
