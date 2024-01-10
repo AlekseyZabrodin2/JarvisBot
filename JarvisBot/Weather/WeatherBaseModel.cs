@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace JarvisBot.Weather
@@ -12,19 +13,19 @@ namespace JarvisBot.Weather
     public class WeatherBaseModel
     {
 
-        [JsonProperty("now")]
-        public long Now { get; set; }
+        [JsonPropertyName("now")]
+        public int Now { get; set; }
 
-        [JsonProperty("now_dt")]
-        public DateTimeOffset NowDt { get; set; }
+        [JsonPropertyName("now_dt")]
+        public string NowDt { get; set; }
 
-        [JsonProperty("info")]
+        [JsonPropertyName("info")]
         public WeatherInfo Info { get; set; }
 
-        [JsonProperty("fact")]
+        [JsonPropertyName("fact")]
         public WeatherFact Fact { get; set; }
 
-        [JsonProperty("forecast")]
+        [JsonPropertyName("forecast")]
         public WeatherForecast Forecast { get; set; }
 
 

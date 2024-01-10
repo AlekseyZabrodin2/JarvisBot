@@ -3,19 +3,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace JarvisBot.Weather
 {
     public class WeatherInfo
     {
-        [JsonProperty("url")]
-        public Uri Url { get; set; }
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
 
-        [JsonProperty("lat")]
+        [JsonPropertyName("lat")]
         public double Lat { get; set; }
 
-        [JsonProperty("lon")]
+        [JsonPropertyName("lon")]
         public double Lon { get; set; }
 
     }

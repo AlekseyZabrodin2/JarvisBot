@@ -3,34 +3,35 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace JarvisBot.Weather
 {
     public class WeatherForecast
     {
-        [JsonProperty("date")]
+        [JsonPropertyName("date")]
         public DateTimeOffset Date { get; set; }
 
-        [JsonProperty("date_ts")]
+        [JsonPropertyName("date_ts")]
         public long DateTs { get; set; }
 
-        [JsonProperty("week")]
+        [JsonPropertyName("week")]
         public long Week { get; set; }
 
-        [JsonProperty("sunrise")]
+        [JsonPropertyName("sunrise")]
         public string Sunrise { get; set; }
 
-        [JsonProperty("sunset")]
+        [JsonPropertyName("sunset")]
         public string Sunset { get; set; }
 
-        [JsonProperty("moon_code")]
+        [JsonPropertyName("moon_code")]
         public long MoonCode { get; set; }
 
-        [JsonProperty("moon_text")]
+        [JsonPropertyName("moon_text")]
         public string MoonText { get; set; }
 
-        [JsonProperty("parts")]
+        [JsonPropertyName("parts")]
         public WeatherPart[] Parts { get; set; }
 
     }
