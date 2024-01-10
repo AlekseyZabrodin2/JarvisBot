@@ -41,7 +41,7 @@ namespace JarvisBot.Weather
         public long Humidity { get; set; }
 
         [JsonPropertyName("prec_mm")]
-        public long PrecMm { get; set; }
+        public float PrecMm { get; set; }
 
         [JsonPropertyName("prec_prob")]
         public long PrecProb { get; set; }
@@ -56,7 +56,7 @@ namespace JarvisBot.Weather
         public string Condition { get; set; }
 
         [JsonPropertyName("feels_like")]
-        public long FeelsLike { get; set; }
+        public int FeelsLike { get; set; }
 
         [JsonPropertyName("daytime")]
         public string Daytime { get; set; }
