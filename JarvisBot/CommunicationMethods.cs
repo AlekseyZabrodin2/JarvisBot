@@ -64,7 +64,7 @@ namespace JarvisBot
         {
             if (message.Text == "USD")
             {
-                var rateMessage = ExchangeRate.RatesResponse();
+                var rateMessage = ExchangeRateLoder.RatesResponse();
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
             }
         }

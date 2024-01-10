@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 
 namespace JarvisBot.Exchange
 {
-    public class ApiResponse
+    public class AlfaExchangeRates
     {
         [JsonPropertyName("rates")]
-        public List<ExchangeRate> Rates { get; set; }
+        public List<AlfaInformationsRate> Rates { get; set; }
     }
 }
