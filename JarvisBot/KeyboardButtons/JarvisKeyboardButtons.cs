@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace JarvisBot
+namespace JarvisBot.KeyboardButtons
 {
     public class JarvisKeyboardButtons
     {
@@ -29,7 +29,8 @@ namespace JarvisBot
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
                     new KeyboardButton[] {"USD", "RUS"},
-                    new KeyboardButton[] {"EUR", "CHN"},
+                    new KeyboardButton[] {"EUR", "CNY"},
+                    new KeyboardButton[] {" < Back "},
                 })
             {
                 ResizeKeyboard = true

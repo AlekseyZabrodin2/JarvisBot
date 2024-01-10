@@ -12,6 +12,7 @@ using System.IO;
 using System.Net;
 using Telegram.Bot.Exceptions;
 using JarvisBot.Weather;
+using JarvisBot.KeyboardButtons;
 
 namespace JarvisBot
 {
@@ -30,6 +31,7 @@ namespace JarvisBot
             await HandleCurrencyAsync(botClient, message);
             await HandleUsaRatesAsync(botClient, message);
             await HandleWeatherAsync(botClient, message);
+            await HandleBackToMenuAsync(botClient, message);
 
             WriteBotMessage(botUsername, _botMessage);
         }
@@ -40,6 +42,14 @@ namespace JarvisBot
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Privet");
 
+            }
+        }
+
+        public async Task HandleBackToMenuAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text == "< Back")
+            {
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ", replyMarkup: _keyboardButtons.GetMenuButtons());
             }
         }
 
@@ -76,7 +86,7 @@ namespace JarvisBot
                 var weatuerMessage = WeatherLoder.WeatherResponse();
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
             }
-        }
+        }        
 
 
         private static void WriteBotMessage(User botUsername, Message message)
