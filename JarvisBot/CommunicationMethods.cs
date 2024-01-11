@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using JarvisBot.Exchange;
 using Telegram.Bot.Types;
 using Telegram.Bot;
 using NLog;
@@ -13,6 +12,8 @@ using System.Net;
 using Telegram.Bot.Exceptions;
 using JarvisBot.Weather;
 using JarvisBot.KeyboardButtons;
+using Telegram.Bot.Types.Enums;
+using JarvisBot.Exchange.AlfaBankInSyncRates;
 
 namespace JarvisBot
 {
@@ -29,7 +30,7 @@ namespace JarvisBot
             await HandleGreetingAsync(botClient, message);
             await HandleMenuAsync(botClient, message);
             await HandleCurrencyAsync(botClient, message);
-            await HandleUsaRatesAsync(botClient, message);
+            await HandleRatesAsync(botClient, message);
             await HandleWeatherAsync(botClient, message);
             await HandleBackToMenuAsync(botClient, message);
 
@@ -41,7 +42,6 @@ namespace JarvisBot
             if (message.Text.Contains("Привет", StringComparison.CurrentCultureIgnoreCase))
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Privet");
-
             }
         }
 
@@ -70,13 +70,13 @@ namespace JarvisBot
             }
         }
 
-        public async Task HandleUsaRatesAsync(ITelegramBotClient botClient, Message message)
+        public async Task HandleRatesAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "USD")
+            if (message.Text == "USD" || message.Text == "EUR" || message.Text == "RUB")
             {
-                var rateMessage = ExchangeRateLoder.RatesResponse();
+                var rateMessage = ExchangeRateLoder.RatesResponse(message.Text);
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
-            }
+            }            
         }
 
         public async Task HandleWeatherAsync(ITelegramBotClient botClient, Message message)
@@ -86,7 +86,7 @@ namespace JarvisBot
                 var weatuerMessage = WeatherLoder.WeatherResponse();
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
             }
-        }        
+        }
 
 
         private static void WriteBotMessage(User botUsername, Message message)
