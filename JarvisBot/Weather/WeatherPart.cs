@@ -14,13 +14,13 @@ namespace JarvisBot.Weather
         public string PartName { get; set; }
 
         [JsonPropertyName("temp_min")]
-        public long TempMin { get; set; }
+        public double TempMin { get; set; }
 
         [JsonPropertyName("temp_avg")]
-        public long TempAvg { get; set; }
+        public double TempAvg { get; set; }
 
         [JsonPropertyName("temp_max")]
-        public long TempMax { get; set; }
+        public double TempMax { get; set; }
 
         [JsonPropertyName("wind_speed")]
         public double WindSpeed { get; set; }
@@ -32,22 +32,22 @@ namespace JarvisBot.Weather
         public string WindDir { get; set; }
 
         [JsonPropertyName("pressure_mm")]
-        public long PressureMm { get; set; }
+        public double PressureMm { get; set; }
 
         [JsonPropertyName("pressure_pa")]
-        public long PressurePa { get; set; }
+        public double PressurePa { get; set; }
 
         [JsonPropertyName("humidity")]
-        public long Humidity { get; set; }
+        public double Humidity { get; set; }
 
         [JsonPropertyName("prec_mm")]
-        public float PrecMm { get; set; }
+        public double PrecMm { get; set; }
 
         [JsonPropertyName("prec_prob")]
-        public long PrecProb { get; set; }
+        public double PrecProb { get; set; }
 
         [JsonPropertyName("prec_period")]
-        public long PrecPeriod { get; set; }
+        public double PrecPeriod { get; set; }
 
         [JsonPropertyName("icon")]
         public string Icon { get; set; }
@@ -56,7 +56,7 @@ namespace JarvisBot.Weather
         public string Condition { get; set; }
 
         [JsonPropertyName("feels_like")]
-        public int FeelsLike { get; set; }
+        public double FeelsLike { get; set; }
 
         [JsonPropertyName("daytime")]
         public string Daytime { get; set; }

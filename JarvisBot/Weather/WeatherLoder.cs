@@ -13,10 +13,6 @@ namespace JarvisBot.Weather
     public class WeatherLoder
     {
 
-        private static WeatherBaseModel _weatherBaseModel = new();
-
-
-
         public static async Task<string> WeatherResponse()
         {
             string rateResponse = null;
@@ -45,20 +41,11 @@ namespace JarvisBot.Weather
 
         public static async Task<WeatherBaseModel> LoadWeather()
         {
-            string responseData = null;
+            string responseData;
+            WeatherBaseModel weatherBaseModel = new();
 
             string apiKey = TelegramBotConfiguration.LoadYandexApiKeyConfiguration();
-
-            // Координаты Минска
-            string latitude = "53.90228271";
-            string longitude = "27.56183052";
-
-            // <язык ответа> (по умолчанию "ru_RU")
-            string language = "ru_RU";
-
-            string apiUrl = $"https://api.weather.yandex.ru/v2/informers?lat={latitude}&lon={longitude}&lang={language}";
-
-            //https://yandex.by/pogoda/minsk?lat=53.902735&lon=27.555691
+            string apiUrl = TelegramBotConfiguration.LoadYandexWeatherConfiguration();
 
             using (HttpClient httpClient = new HttpClient())
             {
@@ -75,7 +62,7 @@ namespace JarvisBot.Weather
                         Console.WriteLine($"Weather response - {responseData}");
 
                         WeatherBaseModel apiResponse = JsonSerializer.Deserialize<WeatherBaseModel>(responseData);
-                        _weatherBaseModel = apiResponse;
+                        weatherBaseModel = apiResponse;
                     }
                     else
                     {
@@ -87,7 +74,7 @@ namespace JarvisBot.Weather
                     Console.WriteLine($"Возникло исключение: {ex.Message}");
                 }
 
-                return _weatherBaseModel;
+                return weatherBaseModel;
             }
         }
 
