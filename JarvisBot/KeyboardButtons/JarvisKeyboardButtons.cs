@@ -28,9 +28,8 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] {"USD", "RUS"},
-                    new KeyboardButton[] {"EUR", "CNY"},
-                    new KeyboardButton[] {" < Back "},
+                    new KeyboardButton[] {"USD", "RUB"},
+                    new KeyboardButton[] {"EUR", "< Back"},
                 })
             {
                 ResizeKeyboard = true
