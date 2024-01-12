@@ -19,6 +19,14 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
     public class ExchangeRateLoder
     {
 
+        private static double _oldUsdRateBuy;
+        private static double _oldUsdRateSell;
+        private static double _oldEurRateBuy;
+        private static double _oldEurRateSell;
+        private static double _oldRubRateBuy;
+        private static double _oldRubRateSell;
+
+
         public static string RatesResponse(string message)
         {
             List<ExchRateRecord> rateRecords = new List<ExchRateRecord>();
@@ -118,6 +126,195 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             return filials;
         }
 
+        /// <summary>
+        /// !!! TODO !!! Продумать варианты хранения курсов с целью их дальнейшего сравнения
+        /// </summary>
+
+        private static string CheckUsdRateBuy(string newRateBuy)
+        {
+            string rateAfterCheck = null;
+
+            double.TryParse(newRateBuy, NumberStyles.Float, CultureInfo.InvariantCulture, out double newUsdRate);
+            if (newUsdRate != null)
+            {
+                if (newUsdRate == _oldUsdRateBuy)
+                {
+                    rateAfterCheck = $"{newRateBuy}";
+                }
+                if (newUsdRate > _oldUsdRateBuy)
+                {
+                    rateAfterCheck = $"{newRateBuy} ↑";
+                }
+                if (newUsdRate < _oldUsdRateBuy)
+                {
+                    rateAfterCheck = $"{newRateBuy} ↓";
+                }
+
+                _oldUsdRateBuy = newUsdRate;
+            }
+            else
+            {
+                // В случае ошибки преобразования возвращаем пустую строку
+                Console.WriteLine("Ошибка преобразования курса валюты USD.");
+            }
+
+            return rateAfterCheck;
+        }
+
+        private static string CheckUsdRateSell(string newRateSell)
+        {
+            string rateAfterCheck = null;
+
+            double.TryParse(newRateSell, NumberStyles.Float, CultureInfo.InvariantCulture, out double newUsdRate);
+            if (newUsdRate != null)
+            {
+                if (newUsdRate == _oldUsdRateSell)
+                {
+                    rateAfterCheck = $"{newRateSell}";
+                }
+                if (newUsdRate > _oldUsdRateSell)
+                {
+                    rateAfterCheck = $"{newRateSell} ↑";
+                }
+                if (newUsdRate < _oldUsdRateSell)
+                {
+                    rateAfterCheck = $"{newRateSell} ↓";
+                }
+
+                _oldUsdRateSell = newUsdRate;
+            }
+            else
+            {
+                // В случае ошибки преобразования возвращаем пустую строку
+                Console.WriteLine("Ошибка преобразования курса валюты USD.");
+            }
+
+            return rateAfterCheck;
+        }
+
+        private static string CheckEurRateBuy(string newRateBuy)
+        {
+            string rateAfterCheck = null;
+
+            double.TryParse(newRateBuy, NumberStyles.Float, CultureInfo.InvariantCulture, out double newEurRate);
+            if (newEurRate != null)
+            {
+                if (newEurRate == _oldEurRateBuy)
+                {
+                    rateAfterCheck = $"{newRateBuy}";
+                }
+                if (newEurRate > _oldEurRateBuy)
+                {
+                    rateAfterCheck = $"{newRateBuy} ↑";
+                }
+                if (newEurRate < _oldEurRateBuy)
+                {
+                    rateAfterCheck = $"{newRateBuy} ↓";
+                }
+
+                _oldEurRateBuy = newEurRate;
+            }
+            else
+            {
+                // В случае ошибки преобразования возвращаем пустую строку
+                Console.WriteLine("Ошибка преобразования курса валюты USD.");
+            }
+
+            return rateAfterCheck;
+        }
+
+        private static string CheckEurRateSell(string newRateSell)
+        {
+            string rateAfterCheck = null;
+
+            double.TryParse(newRateSell, NumberStyles.Float, CultureInfo.InvariantCulture, out double newEurRate);
+            if (newEurRate != null)
+            {
+                if (newEurRate == _oldEurRateSell)
+                {
+                    rateAfterCheck = $"{newRateSell}";
+                }
+                if (newEurRate > _oldEurRateSell)
+                {
+                    rateAfterCheck = $"{newRateSell} ↑";
+                }
+                if (newEurRate < _oldEurRateSell)
+                {
+                    rateAfterCheck = $"{newRateSell} ↓";
+                }
+
+                _oldEurRateSell = newEurRate;
+            }
+            else
+            {
+                // В случае ошибки преобразования возвращаем пустую строку
+                Console.WriteLine("Ошибка преобразования курса валюты EUR.");
+            }
+
+            return rateAfterCheck;
+        }
+
+        private static string CheckRubRateBuy(string newRubRateBuy)
+        {
+            string rateAfterCheck = null;
+
+            double.TryParse(newRubRateBuy, NumberStyles.Float, CultureInfo.InvariantCulture, out double newRubRate);
+            if (newRubRate != null)
+            {
+                if (newRubRate == _oldRubRateBuy)
+                {
+                    rateAfterCheck = $"{newRubRateBuy}";
+                }
+                if (newRubRate > _oldRubRateBuy)
+                {
+                    rateAfterCheck = $"{newRubRateBuy} ↑";
+                }
+                if (newRubRate < _oldRubRateBuy)
+                {
+                    rateAfterCheck = $"{newRubRateBuy} ↓";
+                }
+
+                _oldRubRateBuy = newRubRate;
+            }
+            else
+            {
+                // В случае ошибки преобразования возвращаем пустую строку
+                Console.WriteLine("Ошибка преобразования курса валюты RUB.");
+            }
+
+            return rateAfterCheck;
+        }
+
+        private static string CheckRubRateSell(string newRubRateSell)
+        {
+            string rateAfterCheck = null;
+
+            double.TryParse(newRubRateSell, NumberStyles.Float, CultureInfo.InvariantCulture, out double newRubRate);
+            if (newRubRate != null)
+            {
+                if (newRubRate == _oldRubRateSell)
+                {
+                    rateAfterCheck = $"{newRubRateSell}";
+                }
+                if (newRubRate > _oldRubRateSell)
+                {
+                    rateAfterCheck = $"{newRubRateSell} ↑";
+                }
+                if (newRubRate < _oldRubRateSell)
+                {
+                    rateAfterCheck = $"{newRubRateSell} ↓";
+                }
+
+                _oldRubRateSell = newRubRate;
+            }
+            else
+            {
+                // В случае ошибки преобразования возвращаем пустую строку
+                Console.WriteLine("Ошибка преобразования курса валюты RUB.");
+            }
+
+            return rateAfterCheck;
+        }
 
     }
 }
