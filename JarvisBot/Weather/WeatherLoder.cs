@@ -1,10 +1,7 @@
 ﻿using JarvisBot.Data;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -15,28 +12,64 @@ namespace JarvisBot.Weather
 
         public static async Task<string> WeatherResponse()
         {
-            string rateResponse = null;
+            string weatherResponse = null;
+            string factWeather = null;
+            string forecastPartOne = null;
+            string forecastPartTwo = null;
+
             try
             {
                 var apiResponse = await LoadWeather();
 
-                foreach (var item in apiResponse.Forecast.Parts)
-                {
-                    rateResponse = $" Текущая температура: {apiResponse.Fact.Temp}°C" +
-                    $"\r\n Минимальная температура: {item.TempMin}°C" +
-                    $"\r\n Максимальная температура: {item.TempMax}°C" +
-                    $"\r\n Средняя температура: {item.TempAvg}°C" +
-                    $"\r\n Ощущается как: {item.FeelsLike}°C" +
-                    $"\r\n Скорость ветра: {apiResponse.Fact.WindSpeed} м/с";
-                }
+                var forecastPartsAreaOne = apiResponse.Forecast.Parts[0];
+                var forecastPartsAreaTwo = apiResponse.Forecast.Parts[1];
 
-                return rateResponse;
+                factWeather = FactWeatherPartTwo(apiResponse);
+                forecastPartOne = WeatherForecastPartTwo(apiResponse, forecastPartsAreaOne);
+                forecastPartTwo = WeatherForecastPartTwo(apiResponse, forecastPartsAreaTwo);
+
+                weatherResponse = DisplayWeather(factWeather, forecastPartOne, forecastPartTwo);
+
+                return weatherResponse;
             }
             catch (WebException ex)
             {
                 Console.WriteLine("Возникло исключение");
                 throw;
             }
+        }
+
+        private static string FactWeatherPartTwo(WeatherBaseModel apiResponse)
+        {
+            var forecastWeather = $"  Минск  " +
+                                $"\r\n{apiResponse.Fact.Temp}°C" +
+                                $"\r\n {DisplayWeatherInfo.DisplayFactInformation(apiResponse.Fact.Condition)}" +
+                                $"\r\n Ощущается как: {apiResponse.Fact.FeelsLike}°C" +
+                                $"\r\n Ветер {DisplayWeatherInfo.DetermineWindStrengthCategory(apiResponse.Fact.WindSpeed)}: {apiResponse.Fact.WindSpeed} м/с, {DisplayWeatherInfo.DisplayFactInformation(apiResponse.Fact.WindDir)}";
+
+            return forecastWeather;
+        }
+
+        private static string WeatherForecastPartTwo(WeatherBaseModel apiResponse, WeatherPart forecastPartsArea)
+        {
+            var forecastWeather = $" {DisplayWeatherInfo.DisplayFactInformation(forecastPartsArea.PartName)} " +
+                                $"\r\n {forecastPartsArea.TempMin}°C ... {forecastPartsArea.TempMax}°C" +
+                                $"\r\n {DisplayWeatherInfo.DisplayFactInformation(forecastPartsArea.Condition)}" +
+                                $"\r\n Ветер {DisplayWeatherInfo.DetermineWindStrengthCategory(forecastPartsArea.WindSpeed)}: {forecastPartsArea.WindSpeed} м/с, {DisplayWeatherInfo.DisplayFactInformation(apiResponse.Fact.WindDir)}" +
+                                $"\r\n Ощущается как: {forecastPartsArea.FeelsLike}°C";
+
+            return forecastWeather;
+        }
+
+        private static string DisplayWeather(string factWeather, string forecastPartOne, string forecastPartTwo)
+        {
+            var displayWeather = factWeather +
+                                $"\r\n-----------------------------------------------------" +
+                                $"\r\n{forecastPartOne}" +
+                                $"\r\n-----------------------------------------------------" +
+                                $"\r\n{forecastPartTwo}";
+
+            return displayWeather;
         }
 
         public static async Task<WeatherBaseModel> LoadWeather()
