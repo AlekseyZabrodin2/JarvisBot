@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace JarvisBot.KeyboardButtons
@@ -36,5 +37,33 @@ namespace JarvisBot.KeyboardButtons
             };
             return replyKeyboard;
         }
+
+        public IReplyMarkup GetHelpButtons()
+        {
+            ReplyKeyboardMarkup replyKeyboard = new(new[]
+                {
+                    new KeyboardButton[] {"Device", "Something" }
+                })
+            {
+                ResizeKeyboard = true
+            };
+            return replyKeyboard;
+        }
+
+        public IReplyMarkup GetStartAnyDeskButtons()
+        {
+            InlineKeyboardMarkup inlineKeyboard = new(new[]
+            {
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Start AnyDesk", callbackData: "Start_AnyDesk"),
+                    InlineKeyboardButton.WithCallbackData(text: "Cancel AnyDesk", callbackData: "Cancel_AnyDesk"),
+                }
+            });
+
+
+            return inlineKeyboard;
+        }
+
     }
 }
