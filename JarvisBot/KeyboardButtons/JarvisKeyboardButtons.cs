@@ -61,9 +61,23 @@ namespace JarvisBot.KeyboardButtons
                 }
             });
 
+            return inlineKeyboard;
+        }
+
+        public IReplyMarkup GetRebootButtons()
+        {
+            InlineKeyboardMarkup inlineKeyboard = new(new[]
+            {
+                new []
+                {
+                    InlineKeyboardButton.WithCallbackData(text: "Reboot", callbackData: "PC_Reboot"),
+                    InlineKeyboardButton.WithCallbackData(text: "Power OFF", callbackData: "PC_PowerOFF"),
+                }
+            });
 
             return inlineKeyboard;
         }
+
 
     }
 }
