@@ -1,19 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot.Types;
-using Telegram.Bot;
-using NLog;
-using Newtonsoft.Json;
-using System.IO;
-using System.Net;
-using Telegram.Bot.Exceptions;
-using JarvisBot.Weather;
+﻿using JarvisBot.Exchange.AlfaBankInSyncRates;
 using JarvisBot.KeyboardButtons;
-using Telegram.Bot.Types.Enums;
-using JarvisBot.Exchange.AlfaBankInSyncRates;
+using JarvisBot.Weather;
+using NLog;
+using System;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using Telegram.Bot;
+using Telegram.Bot.Types;
 
 namespace JarvisBot
 {
@@ -23,10 +17,11 @@ namespace JarvisBot
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static Message _botMessage = new();
+        private Process _anyDeskProcess;
 
 
         public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername)
-        {
+        {            
             await HandleGreetingAsync(botClient, message);
             await HandleMenuAsync(botClient, message);
             await HandleCurrencyAsync(botClient, message);
@@ -34,7 +29,24 @@ namespace JarvisBot
             await HandleWeatherAsync(botClient, message);
             await HandleBackToMenuAsync(botClient, message);
 
+            await HandleHelpButtonAsync(botClient, message);
+            await HandleDeviceButtonAsync(botClient, message);
+
             WriteBotMessage(botUsername, _botMessage);
+        }
+
+        public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query)
+        {
+            await HandleStartAnyDeskAsync(botClient, query);
+        }
+
+
+        private static void WriteBotMessage(User botUsername, Message message)
+        {
+
+            Console.WriteLine($"Ответ - {botUsername.Username}  ||  сообщение - '{message.Text}' ");
+            _logger.Info($"Ответ - {botUsername.Username}  ||  сообщение - '{message.Text}' ");
+            _botMessage.Text = string.Empty;
         }
 
         public async Task HandleGreetingAsync(ITelegramBotClient botClient, Message message)
@@ -76,7 +88,7 @@ namespace JarvisBot
             {
                 var rateMessage = ExchangeRateLoder.RatesResponse(message.Text);
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
-            }            
+            }
         }
 
         public async Task HandleWeatherAsync(ITelegramBotClient botClient, Message message)
@@ -86,15 +98,116 @@ namespace JarvisBot
                 var weatuerMessage = WeatherLoder.WeatherResponse();
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
             }
-        }
+        }        
 
-
-        private static void WriteBotMessage(User botUsername, Message message)
+        public async Task HandleHelpButtonAsync(ITelegramBotClient botClient, Message message)
         {
-
-            Console.WriteLine($"Ответ - {botUsername.Username}  ||  сообщение - '{message.Text}' ");
-            _logger.Info($"Ответ - {botUsername.Username}  ||  сообщение - '{message.Text}' ");
-            _botMessage.Text = string.Empty;
+            if (message.Text.Contains("Help", StringComparison.CurrentCultureIgnoreCase))
+            {
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?", replyMarkup: _keyboardButtons.GetHelpButtons());
+            }
         }
+
+        public async Task HandleDeviceButtonAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text.Contains("Device", StringComparison.CurrentCultureIgnoreCase))
+            {
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы уверены?", replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
+            }
+        }
+                
+        public async Task HandleStartAnyDeskAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery)
+        {
+            if (callbackQuery.Data == "Start_AnyDesk")
+            {            
+                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "AnyDesk включается...");
+                StartAnyDesk(botClient, _botMessage);
+            }
+            else if (callbackQuery.Data == "Cancel_AnyDesk")
+            {
+                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Выключение AnyDesk.", replyMarkup: _keyboardButtons.GetMenuButtons());
+                await StopAnyDesk(botClient, _botMessage);
+            }
+        }
+
+        public void StartAnyDesk(ITelegramBotClient botClient, Message message)
+        {
+            if (!Process.GetProcessesByName("AnyDesk").Any())
+            {
+                string processName = @"C:\Program Files (x86)\AnyDesk\AnyDesk.exe";
+
+                _anyDeskProcess = new()
+                {
+                    StartInfo =
+                    {
+                        FileName = processName,
+                        Verb = "runas" // "runas" указывает на запуск с правами администратора
+                    }
+                };
+
+                try
+                {
+                    _anyDeskProcess.Start();
+
+                    if (Process.GetProcessesByName("AnyDesk").Any())
+                    {
+                        botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk запущен");
+                        Console.WriteLine("AnyDesk запущен");
+                    }
+                    else
+                    {
+                        botClient.SendTextMessageAsync(message.Chat.Id, "Проблемы с запуском...");
+                    }
+                }
+                catch (System.ComponentModel.Win32Exception ex)
+                {
+                    Console.WriteLine($"Ошибка: {ex.Message}");
+                }
+            }
+            else
+            {
+                botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk уже запущен");
+                Console.WriteLine("AnyDesk уже запущен");
+            }                      
+        }
+
+        public async Task<bool> StopAnyDesk(ITelegramBotClient botClient, Message message)
+        {            
+            if (_anyDeskProcess != null)
+            {
+                _anyDeskProcess.Kill();
+                await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрывается...");
+                Console.WriteLine("AnyDesk закрывается...");
+            }
+
+            await Task.Delay(1000);
+
+            if (!Process.GetProcessesByName("AnyDesk").Any())
+            {
+                await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
+                Console.WriteLine("AnyDesk закрыт");
+            }
+            else
+            {
+                await CloseAnyDeskProcesses(botClient, message);
+            }
+
+            return true;
+        }
+
+        private async Task CloseAnyDeskProcesses(ITelegramBotClient botClient, Message message)
+        {
+            foreach (var process in Process.GetProcessesByName("AnyDesk"))
+            {
+                process.Kill();
+
+                await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрывается...");
+                Console.WriteLine("AnyDesk закрывается...");
+            }
+
+            await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
+            Console.WriteLine("AnyDesk закрыт");
+        }
+
     }
 }
