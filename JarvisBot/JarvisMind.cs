@@ -2,13 +2,12 @@
 using JarvisBot.KeyboardButtons;
 using NLog;
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.ReplyMarkups;
+using Telegram.Bot.Types.Enums;
 
 namespace JarvisBot
 {
@@ -29,7 +28,7 @@ namespace JarvisBot
         //[DllImport("user32.dll")]
         //static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-        //const int SW_HIDE = 0;  
+        //const int SW_HIDE = 0;
 
         private static async Task Main()
         {
@@ -66,15 +65,21 @@ namespace JarvisBot
         private static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             var message = update.Message;
+            var callbackQuery = update.CallbackQuery;
 
-            Console.WriteLine($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
-            _logger.Info($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
-
+            if (update.Type == UpdateType.CallbackQuery)
+            {
+                await HandleCallbackQueryAsync(botClient, callbackQuery);
+                return;
+            }
 
             if (message.Text == null)
             {
                 return;
-            }
+            }            
+
+            Console.WriteLine($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
+            _logger.Info($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
 
             await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername);           
         }
@@ -87,13 +92,17 @@ namespace JarvisBot
                     => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
                 _ => exception.ToString()
             };
-
+            _logger.Error(ErrorMessage);
             Console.WriteLine(ErrorMessage);
             return Task.CompletedTask;
         }
 
+        private static async Task HandleCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery query)
+        {
+            _communicationMethods.ProcessingCallback(botClient, query);
+        }
 
-        
+
 
         private static void OnProcessExit(object sender, EventArgs e)
         {
