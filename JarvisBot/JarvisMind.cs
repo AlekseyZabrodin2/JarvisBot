@@ -19,6 +19,11 @@ namespace JarvisBot
 
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static CommunicationMethods _communicationMethods = new();
+
+        /// <summary>
+        /// TODO add Echo Time , но надо подумать нужен ли он ?
+        /// </summary>
+        //private static JarvisEchoTimer _echoTimer = new();
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
 
@@ -42,6 +47,8 @@ namespace JarvisBot
             Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
             _logger.Info($"Start listening for @{_botClientUsername.Username}");
 
+            //_echoTimer.SetTimer();
+
             using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
             {
                 using var tocen = new CancellationTokenSource();
@@ -52,7 +59,7 @@ namespace JarvisBot
                     return;
                 }
 
-                _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
+                await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
 
                 _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
                 
@@ -76,12 +83,16 @@ namespace JarvisBot
             if (message.Text == null)
             {
                 return;
-            }            
+            }
+            
+            //_echoTimer.StopTimer();
 
             Console.WriteLine($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
             _logger.Info($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
 
-            await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername);           
+            await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername);
+
+            //_echoTimer.SetTimer();
         }
 
         private static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
