@@ -5,6 +5,7 @@ using NLog;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -32,12 +33,15 @@ namespace JarvisBot
             await HandleHelpButtonAsync(botClient, message);
             await HandleDeviceButtonAsync(botClient, message);
 
+            await HandleRebootButtonAsync(botClient, message);
+
             WriteBotMessage(botUsername, _botMessage);
         }
 
         public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query)
         {
             await HandleStartAnyDeskAsync(botClient, query);
+            await HandleRebootPCAsync(botClient, query);
         }
 
 
@@ -110,7 +114,7 @@ namespace JarvisBot
 
         public async Task HandleDeviceButtonAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text.Contains("Device", StringComparison.CurrentCultureIgnoreCase))
+            if (message.Text == "Device")
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы уверены?", replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
             }
@@ -175,9 +179,7 @@ namespace JarvisBot
         {            
             if (_anyDeskProcess != null)
             {
-                _anyDeskProcess.Kill();
-                await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрывается...");
-                Console.WriteLine("AnyDesk закрывается...");
+                await CloseAnyDeskProcesses(botClient, message);
             }
 
             await Task.Delay(1000);
@@ -189,7 +191,13 @@ namespace JarvisBot
             }
             else
             {
+                await botClient.SendTextMessageAsync(message.Chat.Id, "... закрываем AnyDesk повторно");
+                Console.WriteLine("... закрываем AnyDesk повторно");
+
                 await CloseAnyDeskProcesses(botClient, message);
+
+                await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
+                Console.WriteLine("AnyDesk закрыт");
             }
 
             return true;
@@ -204,10 +212,45 @@ namespace JarvisBot
                 await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрывается...");
                 Console.WriteLine("AnyDesk закрывается...");
             }
-
-            await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
-            Console.WriteLine("AnyDesk закрыт");
         }
+
+        public async Task HandleRebootButtonAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text == "Something")
+            {
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управлением компьютера:", replyMarkup: _keyboardButtons.GetRebootButtons());
+            }
+        }
+
+        public async Task HandleRebootPCAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery)
+        {
+            if (callbackQuery.Data == "PC_Reboot")
+            {
+                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Ждите компьютер ПЕРЕЗАГРУЖАЕТСЯ...");
+                RebootPcClick(botClient, _botMessage);
+            }
+            else if (callbackQuery.Data == "PC_PowerOFF")
+            {
+                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "ВЫКЛЮЧЕНИЕ компьютера...");
+                PowerOffPcClick(botClient, _botMessage);
+            }
+        }
+
+        public void RebootPcClick(ITelegramBotClient botClient, Message message)
+        {
+            string rebootPC = @"D:\Develop\Reboot.bat";
+            Process.Start(rebootPC);
+
+            botClient.SendTextMessageAsync(message.Chat.Id, "Ждите Я скоро ..!");
+            Console.WriteLine("Ждите Я скоро ..!");
+        }
+
+        public void PowerOffPcClick(ITelegramBotClient botClient, Message message)
+        {
+            string powerOffPC = @"D:\Develop\PowerOFF.bat";
+            Process.Start(powerOffPC);
+        }
+
 
     }
 }
