@@ -1,5 +1,7 @@
 ﻿using JarvisBot.Data;
 using JarvisBot.KeyboardButtons;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using NLog;
 using System;
 using System.Threading;
@@ -11,10 +13,10 @@ using Telegram.Bot.Types.Enums;
 
 namespace JarvisBot
 {
-    class JarvisMind
-    {        
+    class JarvisMind : BackgroundService
+    {
         private static TelegramBotClient _botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
-        private static readonly ChatId _userChatId = new (TelegramBotConfiguration.LoadChatIdConfiguration());
+        private static readonly ChatId _userChatId = new(TelegramBotConfiguration.LoadChatIdConfiguration());
         private static User _botClientUsername = new();
 
         private static JarvisKeyboardButtons _keyboardButtons = new();
@@ -35,37 +37,20 @@ namespace JarvisBot
 
         //const int SW_HIDE = 0;
 
-        private static async Task Main()
+        private static async Task Main(string[] args)
         {
 
-            //IntPtr consoleHandle = GetConsoleWindow();
-            //ShowWindow(consoleHandle, SW_HIDE);
-
-            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-
-            _botClientUsername = await _botClient.GetMeAsync();
-            Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
-            _logger.Info($"Start listening for @{_botClientUsername.Username}");
-
-            //_echoTimer.SetTimer();
-
-            using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
-            {
-                using var tocen = new CancellationTokenSource();
-
-                if (!isNewInstance)
+            var host = new HostBuilder()
+                .ConfigureHostConfiguration(hconfig => { })
+                .ConfigureServices((context, services) =>
                 {
-                    Console.WriteLine("Программа запущена !!!");
-                    return;
-                }
+                    services.AddHostedService<JarvisMind>();
+                }).UseConsoleLifetime().Build();
 
-                await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
+            host.Run();
 
-                _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
-                
-                Console.ReadLine();
-                tocen.Cancel();
-            }
+
+
 
         }
 
@@ -84,7 +69,7 @@ namespace JarvisBot
             {
                 return;
             }
-            
+
             //_echoTimer.StopTimer();
 
             Console.WriteLine($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
@@ -111,6 +96,46 @@ namespace JarvisBot
         private static async Task HandleCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery query)
         {
             _communicationMethods.ProcessingCallback(botClient, query);
+        }
+
+
+
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            //IntPtr consoleHandle = GetConsoleWindow();
+            //ShowWindow(consoleHandle, SW_HIDE);
+
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+
+            _botClientUsername = await _botClient.GetMeAsync();
+            Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
+            _logger.Info($"Start listening for @{_botClientUsername.Username}");
+
+            //_echoTimer.SetTimer();
+
+            using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
+            {
+                using var tocen = new CancellationTokenSource();
+
+                if (!isNewInstance)
+                {
+                    Console.WriteLine("Программа запущена !!!");
+                    return;
+                }
+
+                await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
+
+                _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
+
+                //Console.ReadLine();
+                //tocen.Cancel();
+
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+                }
+            }            
         }
 
 
