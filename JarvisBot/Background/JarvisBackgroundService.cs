@@ -20,7 +20,7 @@ namespace JarvisBot.Background
 {
     class JarvisBackgroundService : BackgroundService
     {
-        
+
         TelegramBotClient _botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
         private static readonly ChatId _userChatId = new(TelegramBotConfiguration.LoadChatIdConfiguration());
         private User _botClientUsername = new();
@@ -29,58 +29,8 @@ namespace JarvisBot.Background
         private static CommunicationMethods _communicationMethods = new();
 
         private ILogger _logger = LogManager.GetCurrentClassLogger();
-       
 
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            //_logger.Info($"Start listening");
-
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                //_botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
-
-
-
-                _logger.Info($"Start listening");
-
-                //IntPtr consoleHandle = GetConsoleWindow();
-                //ShowWindow(consoleHandle, SW_HIDE);
-
-                //AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-
-                //_botClientUsername = await _botClient.GetMeAsync();
-                //Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
-                //_logger.Info($"Start listening for @{_botClientUsername.Username}");
-
-
-                ////_echoTimer.SetTimer();
-
-                //using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
-                //{
-                //    using var tocen = new CancellationTokenSource();
-
-                //    if (!isNewInstance)
-                //    {
-                //        Console.WriteLine("Программа запущена !!!");
-                //        return;
-                //    }
-
-                //    await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
-
-                //    _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
-
-                //    Console.ReadLine();
-                //    tocen.Cancel();
-
-
-
-                    Console.WriteLine("Программа запущена !!!");
-                Task.Delay(1000, stoppingToken).Wait(stoppingToken);
-                //}
-                //return;
-            }
-        }
 
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -99,14 +49,10 @@ namespace JarvisBot.Background
                 return;
             }
 
-            //_echoTimer.StopTimer();
-
             Console.WriteLine($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
             _logger.Info($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
 
             await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername);
-
-            //_echoTimer.SetTimer();
         }
 
         private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -124,11 +70,40 @@ namespace JarvisBot.Background
 
         private static async Task HandleCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery query)
         {
-            _communicationMethods.ProcessingCallback(botClient, query);
+            await _communicationMethods.ProcessingCallback(botClient, query);
         }
 
 
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
 
+            while (!stoppingToken.IsCancellationRequested)
+            {                
+                AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+
+                _botClientUsername = await _botClient.GetMeAsync();
+                Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
+                _logger.Info($"Start listening for @{_botClientUsername.Username}");
+
+                using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
+                {
+                    using var tocen = new CancellationTokenSource();
+
+                    if (!isNewInstance)
+                    {
+                        Console.WriteLine("Программа запущена !!!");
+                        return;
+                    }
+
+                    await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
+                    _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
+
+                    Console.WriteLine("Программа запущена !!!");
+                    await Task.Delay(1000, stoppingToken);
+                }
+                return;
+            }
+        }
 
 
         private void OnProcessExit(object sender, EventArgs e)
@@ -136,7 +111,5 @@ namespace JarvisBot.Background
             _logger.Info("Для меня честь быть с Вами");
             _botClient.SendTextMessageAsync(_userChatId, "Для меня честь быть с Вами");
         }
-
-
     }
 }

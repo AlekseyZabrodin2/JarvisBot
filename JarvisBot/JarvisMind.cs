@@ -14,156 +14,23 @@ using Telegram.Bot.Types.Enums;
 
 namespace JarvisBot
 {
-    class JarvisMind : BackgroundService
+    class JarvisMind
     {
-
-        TelegramBotClient _botClient = new("6785821927:AAGPI9_kY7aYGCkjYevDi2loM0GDPetFrw4");
-        private static readonly ChatId _userChatId = new(552523783);
-        private User _botClientUsername = new();
-
-        private static JarvisKeyboardButtons _keyboardButtons = new();
-        private static CommunicationMethods _communicationMethods = new();
-
-        /// <summary>
-        /// TODO add Echo Time , но надо подумать нужен ли он ?
-        /// </summary>
-        //private static JarvisEchoTimer _echoTimer = new();
-        private ILogger _logger = LogManager.GetCurrentClassLogger();
-
-
-        //[DllImport("kernel32.dll")]
-        //static extern IntPtr GetConsoleWindow();
-
-        //[DllImport("user32.dll")]
-        //static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        //const int SW_HIDE = 0;
+                
 
         private static async Task Main(string[] args)
         {
-
-            //var host = new HostBuilder()
-            //    .ConfigureHostConfiguration(hconfig => { })
-            //    .ConfigureServices((context, services) =>
-            //    {
-            //        services.AddHostedService<JarvisBackgroundService>();
-            //    }).UseConsoleLifetime().Build();
-
             var host = Host
                 .CreateDefaultBuilder(args)
                 .ConfigureServices((context, services) =>
                 {
-                    services.AddHostedService<JarvisMind>();
+                    services.AddHostedService<JarvisBackgroundService>();
                 })
                 .UseWindowsService()
                 .Build();
 
             await host.RunAsync();
-
         }
 
-
-
-
-        private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
-        {
-            var message = update.Message;
-            var callbackQuery = update.CallbackQuery;
-
-            if (update.Type == UpdateType.CallbackQuery)
-            {
-                await HandleCallbackQueryAsync(botClient, callbackQuery);
-                return;
-            }
-
-            if (message.Text == null)
-            {
-                return;
-            }
-
-            //_echoTimer.StopTimer();
-
-            Console.WriteLine($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
-            _logger.Info($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
-
-            await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername);
-
-            //_echoTimer.SetTimer();
-        }
-
-        private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
-        {
-            var ErrorMessage = exception switch
-            {
-                ApiRequestException apiRequestException
-                    => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
-                _ => exception.ToString()
-            };
-            _logger.Error(ErrorMessage);
-            Console.WriteLine(ErrorMessage);
-            return Task.CompletedTask;
-        }
-
-        private static async Task HandleCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery query)
-        {
-            _communicationMethods.ProcessingCallback(botClient, query);
-        }
-
-
-
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {            
-
-            while (!stoppingToken.IsCancellationRequested)
-            {               
-
-                _logger.Info($"Start listening");
-
-                //IntPtr consoleHandle = GetConsoleWindow();
-                //ShowWindow(consoleHandle, SW_HIDE);
-
-                AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-
-                _botClientUsername = await _botClient.GetMeAsync();
-                Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
-                _logger.Info($"Start listening for @{_botClientUsername.Username}");
-
-
-                //_echoTimer.SetTimer();
-
-                using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
-                {
-                    using var tocen = new CancellationTokenSource();
-
-                    if (!isNewInstance)
-                    {
-                        Console.WriteLine("Программа запущена !!!");
-                        return;
-                    }
-
-                    await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
-
-                    _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
-
-                    Console.WriteLine("Программа запущена !!!");
-                    await Task.Delay(1000, stoppingToken);
-
-                    
-                }
-                return;
-            }
-        }
-
-
-
-
-
-
-        private void OnProcessExit(object sender, EventArgs e)
-        {
-            _logger.Info("Для меня честь быть с Вами");
-            _botClient.SendTextMessageAsync(_userChatId, "Для меня честь быть с Вами");
-        }
     }
 }
