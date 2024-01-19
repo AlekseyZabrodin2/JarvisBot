@@ -1,19 +1,13 @@
 ﻿using JarvisBot.Data;
 using JarvisBot.KeyboardButtons;
-using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.Hosting;
 using NLog;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ServiceProcess;
-using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot.Types;
-using Telegram.Bot;
-using Telegram.Bot.Polling;
 using System.Threading;
-using Microsoft.Extensions.Hosting;
+using System.Threading.Tasks;
+using Telegram.Bot;
 using Telegram.Bot.Exceptions;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace JarvisBot.Background
@@ -31,6 +25,28 @@ namespace JarvisBot.Background
         private ILogger _logger = LogManager.GetCurrentClassLogger();
 
 
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                using var tocen = new CancellationTokenSource();
+
+                _botClientUsername = await _botClient.GetMeAsync();
+                Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
+                _logger.Info($"Start listening for @{_botClientUsername.Username}");
+
+                await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
+
+                _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
+
+                Console.WriteLine("Программа запущена !!!");
+                await Task.Delay(1000, stoppingToken);
+                return;
+            }
+        }
 
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
@@ -71,38 +87,6 @@ namespace JarvisBot.Background
         private static async Task HandleCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery query)
         {
             await _communicationMethods.ProcessingCallback(botClient, query);
-        }
-
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-
-            while (!stoppingToken.IsCancellationRequested)
-            {                
-                AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
-
-                _botClientUsername = await _botClient.GetMeAsync();
-                Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
-                _logger.Info($"Start listening for @{_botClientUsername.Username}");
-
-                using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
-                {
-                    using var tocen = new CancellationTokenSource();
-
-                    if (!isNewInstance)
-                    {
-                        Console.WriteLine("Программа запущена !!!");
-                        return;
-                    }
-
-                    await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
-                    _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
-
-                    Console.WriteLine("Программа запущена !!!");
-                    await Task.Delay(1000, stoppingToken);
-                }
-                return;
-            }
         }
 
 
