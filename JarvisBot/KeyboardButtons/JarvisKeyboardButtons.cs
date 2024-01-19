@@ -42,7 +42,8 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] {"Device", "Something" }
+                    new KeyboardButton[] {"Device", "Something"},
+                    new KeyboardButton[] {"< Back"}
                 })
             {
                 ResizeKeyboard = true
