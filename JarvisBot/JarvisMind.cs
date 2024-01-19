@@ -1,4 +1,5 @@
-﻿using JarvisBot.Data;
+﻿using JarvisBot.Background;
+using JarvisBot.Data;
 using JarvisBot.KeyboardButtons;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,9 +16,10 @@ namespace JarvisBot
 {
     class JarvisMind : BackgroundService
     {
-        private static TelegramBotClient _botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
-        private static readonly ChatId _userChatId = new(TelegramBotConfiguration.LoadChatIdConfiguration());
-        private static User _botClientUsername = new();
+
+        TelegramBotClient _botClient = new("6785821927:AAGPI9_kY7aYGCkjYevDi2loM0GDPetFrw4");
+        private static readonly ChatId _userChatId = new(552523783);
+        private User _botClientUsername = new();
 
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static CommunicationMethods _communicationMethods = new();
@@ -26,7 +28,7 @@ namespace JarvisBot
         /// TODO add Echo Time , но надо подумать нужен ли он ?
         /// </summary>
         //private static JarvisEchoTimer _echoTimer = new();
-        private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
+        private ILogger _logger = LogManager.GetCurrentClassLogger();
 
 
         //[DllImport("kernel32.dll")]
@@ -40,21 +42,30 @@ namespace JarvisBot
         private static async Task Main(string[] args)
         {
 
-            var host = new HostBuilder()
-                .ConfigureHostConfiguration(hconfig => { })
+            //var host = new HostBuilder()
+            //    .ConfigureHostConfiguration(hconfig => { })
+            //    .ConfigureServices((context, services) =>
+            //    {
+            //        services.AddHostedService<JarvisBackgroundService>();
+            //    }).UseConsoleLifetime().Build();
+
+            var host = Host
+                .CreateDefaultBuilder(args)
                 .ConfigureServices((context, services) =>
                 {
                     services.AddHostedService<JarvisMind>();
-                }).UseConsoleLifetime().Build();
+                })
+                .UseWindowsService()
+                .Build();
 
-            host.Run();
-
-
-
+            await host.RunAsync();
 
         }
 
-        private static async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+
+
+
+        private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             var message = update.Message;
             var callbackQuery = update.CallbackQuery;
@@ -80,7 +91,7 @@ namespace JarvisBot
             //_echoTimer.SetTimer();
         }
 
-        private static Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+        private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
             var ErrorMessage = exception switch
             {
@@ -102,45 +113,54 @@ namespace JarvisBot
 
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            //IntPtr consoleHandle = GetConsoleWindow();
-            //ShowWindow(consoleHandle, SW_HIDE);
+        {            
 
-            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+            while (!stoppingToken.IsCancellationRequested)
+            {               
 
-            _botClientUsername = await _botClient.GetMeAsync();
-            Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
-            _logger.Info($"Start listening for @{_botClientUsername.Username}");
+                _logger.Info($"Start listening");
 
-            //_echoTimer.SetTimer();
+                //IntPtr consoleHandle = GetConsoleWindow();
+                //ShowWindow(consoleHandle, SW_HIDE);
 
-            using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
-            {
-                using var tocen = new CancellationTokenSource();
+                AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
 
-                if (!isNewInstance)
+                _botClientUsername = await _botClient.GetMeAsync();
+                Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
+                _logger.Info($"Start listening for @{_botClientUsername.Username}");
+
+
+                //_echoTimer.SetTimer();
+
+                using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
                 {
+                    using var tocen = new CancellationTokenSource();
+
+                    if (!isNewInstance)
+                    {
+                        Console.WriteLine("Программа запущена !!!");
+                        return;
+                    }
+
+                    await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
+
+                    _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
+
                     Console.WriteLine("Программа запущена !!!");
-                    return;
+                    await Task.Delay(1000, stoppingToken);
+
+                    
                 }
-
-                await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
-
-                _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
-
-                //Console.ReadLine();
-                //tocen.Cancel();
-
-                while (!stoppingToken.IsCancellationRequested)
-                {
-                    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
-                }
-            }            
+                return;
+            }
         }
 
 
 
-        private static void OnProcessExit(object sender, EventArgs e)
+
+
+
+        private void OnProcessExit(object sender, EventArgs e)
         {
             _logger.Info("Для меня честь быть с Вами");
             _botClient.SendTextMessageAsync(_userChatId, "Для меня честь быть с Вами");
