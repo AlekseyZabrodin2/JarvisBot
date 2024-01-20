@@ -56,7 +56,7 @@ namespace JarvisBot.Background
 
             if (update.Type == UpdateType.CallbackQuery)
             {
-                await HandleCallbackQueryAsync(botClient, callbackQuery);
+                await _communicationMethods.ProcessingCallback(botClient, callbackQuery);
                 return;
             }
 
@@ -83,12 +83,6 @@ namespace JarvisBot.Background
             Console.WriteLine(ErrorMessage);
             return Task.CompletedTask;
         }
-
-        private static async Task HandleCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery query)
-        {
-            await _communicationMethods.ProcessingCallback(botClient, query);
-        }
-
 
         private void OnProcessExit(object sender, EventArgs e)
         {
