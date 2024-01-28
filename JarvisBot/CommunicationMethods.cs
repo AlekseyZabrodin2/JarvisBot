@@ -17,6 +17,7 @@ namespace JarvisBot
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static Message _botMessage = new();
+        private static ExchangeRateLoder _exchangeRateLoder = new();
         private Process _anyDeskProcess;
 
 
@@ -89,7 +90,7 @@ namespace JarvisBot
         {
             if (message.Text == "USD" || message.Text == "EUR" || message.Text == "RUB")
             {
-                var rateMessage = ExchangeRateLoder.RatesResponse(message.Text);
+                var rateMessage = _exchangeRateLoder.RatesResponse(message.Text);
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
             }
         }

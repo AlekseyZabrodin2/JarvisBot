@@ -1,36 +1,30 @@
-﻿using System;
+﻿using JarvisBot.Data;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Reflection.PortableExecutable;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
-using JarvisBot.Data;
-using Telegram.Bot.Types;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace JarvisBot.Exchange.AlfaBankInSyncRates
 {
     public class ExchangeRateLoder
     {
+        private static OldExchangeRates _oldExchangeRates = new ();
 
-        private static double _oldUsdRateBuy;
-        private static double _oldUsdRateSell;
-        private static double _oldEurRateBuy;
-        private static double _oldEurRateSell;
-        private static double _oldRubRateBuy;
-        private static double _oldRubRateSell;
+        //private static double _oldUsdRateBuy = 3.25;
+        //private static double _oldUsdRateSell;
+        //private static double _oldEurRateBuy;
+        //private static double _oldEurRateSell;
+        //private static double _oldRubRateBuy;
+        //private static double _oldRubRateSell;
 
 
-        public static string RatesResponse(string message)
+        public string RatesResponse(string message)
         {
             List<ExchRateRecord> rateRecords = new List<ExchRateRecord>();
-            string rateResponse = null;
+            string? rateResponse = null;
 
             try
             {
@@ -45,38 +39,27 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                     throw new Exception("Нет данных о курсах валют");
                 }
 
+                _oldExchangeRates.ReadJsonFile();
+
                 string dateInput = apiResponse.Filial.Rates.ExchRate.Time;
                 var parsedDate = DateTime.Parse(dateInput);
 
                 if (message == "USD")
                 {
-                    rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
-                    $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
-                    $"\r\n-----------------------------------------------------" +
-                    $"\r\n  1 Доллар США ({rateRecords[0].Mnem})" +
-                    $"\r\n  покупка     -    {rateRecords[0].RateBuy}" +
-                    $"\r\n  продажа    -    {rateRecords[0].RateSell}";
+                    rateResponse = GetUsdRates(rateRecords, parsedDate);
                 }
 
                 if (message == "EUR")
                 {
-                    rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
-                    $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
-                    $"\r\n-----------------------------------------------------" +
-                    $"\r\n  1 Евро ({rateRecords[1].Mnem})" +
-                    $"\r\n  покупка     -    {rateRecords[1].RateBuy}" +
-                    $"\r\n  продажа    -    {rateRecords[1].RateSell}";
+                    rateResponse = GetEurRates(rateRecords, parsedDate);
                 }
 
                 if (message == "RUB")
                 {
-                    rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
-                    $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
-                    $"\r\n-----------------------------------------------------" +
-                    $"\r\n  100 Российских рублей ({rateRecords[2].Mnem})" +
-                    $"\r\n  покупка     -    {rateRecords[2].RateBuy}" +
-                    $"\r\n  продажа    -    {rateRecords[2].RateSell}";
+                    rateResponse = GetRubRates(rateRecords, parsedDate);
                 }
+
+                _oldExchangeRates.WriteJsonFile();
 
                 return rateResponse;
             }
@@ -92,7 +75,7 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             }
         }
 
-        public static Filials LoadAlfabankRate()
+        public Filials LoadAlfabankRate()
         {
             string url = TelegramBotConfiguration.LoadAlfabankRateConfiguration();
             string xmlString;
@@ -125,32 +108,45 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
 
             return filials;
         }
-
-        /// <summary>
-        /// !!! TODO !!! Продумать варианты хранения курсов с целью их дальнейшего сравнения
-        /// </summary>
-
-        private static string CheckUsdRateBuy(string newRateBuy)
+               
+        private string GetUsdRates(List<ExchRateRecord> rateRecords, DateTime parsedDate)
         {
-            string rateAfterCheck = null;
+            string? rateResponse;
+            var rateUsdBuy = CheckUsdRateBuy(rateRecords[0].RateBuy);
+            var rateUsdSell = CheckUsdRateSell(rateRecords[0].RateSell);
+
+            rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
+            $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
+            $"\r\n-----------------------------------------------------" +
+            $"\r\n  1 Доллар США ({rateRecords[0].Mnem})" +
+            $"\r\n  покупка     -    {rateUsdBuy}" +
+            $"\r\n  продажа    -    {rateUsdSell}";
+            return rateResponse;
+        }
+
+        private string CheckUsdRateBuy(string newRateBuy)
+        {
+            string? rateAfterCheck = null;
 
             double.TryParse(newRateBuy, NumberStyles.Float, CultureInfo.InvariantCulture, out double newUsdRate);
             if (newUsdRate != null)
-            {
-                if (newUsdRate == _oldUsdRateBuy)
+            {                
+                double rateDifference = newUsdRate - _oldExchangeRates.OldUsdRateBuy;
+
+                if (newUsdRate == _oldExchangeRates.OldUsdRateBuy)
                 {
                     rateAfterCheck = $"{newRateBuy}";
                 }
-                if (newUsdRate > _oldUsdRateBuy)
+                if (newUsdRate > _oldExchangeRates.OldUsdRateBuy)
                 {
-                    rateAfterCheck = $"{newRateBuy} ↑";
+                    rateAfterCheck = $"↑ {newRateBuy} ( +{rateDifference:0.####} )";
                 }
-                if (newUsdRate < _oldUsdRateBuy)
+                if (newUsdRate < _oldExchangeRates.OldUsdRateBuy)
                 {
-                    rateAfterCheck = $"{newRateBuy} ↓";
+                    rateAfterCheck = $"↓ {newRateBuy} ( {rateDifference:0.####} )";
                 }
 
-                _oldUsdRateBuy = newUsdRate;
+                _oldExchangeRates.OldUsdRateBuy = newUsdRate;
             }
             else
             {
@@ -161,27 +157,29 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             return rateAfterCheck;
         }
 
-        private static string CheckUsdRateSell(string newRateSell)
+        private string CheckUsdRateSell(string newRateSell)
         {
-            string rateAfterCheck = null;
+            string? rateAfterCheck = null;
 
             double.TryParse(newRateSell, NumberStyles.Float, CultureInfo.InvariantCulture, out double newUsdRate);
             if (newUsdRate != null)
             {
-                if (newUsdRate == _oldUsdRateSell)
+                double rateDifference = newUsdRate - _oldExchangeRates.OldUsdRateSell;
+
+                if (newUsdRate == _oldExchangeRates.OldUsdRateSell)
                 {
                     rateAfterCheck = $"{newRateSell}";
                 }
-                if (newUsdRate > _oldUsdRateSell)
+                if (newUsdRate > _oldExchangeRates.OldUsdRateSell)
                 {
-                    rateAfterCheck = $"{newRateSell} ↑";
+                    rateAfterCheck = $"↑ {newRateSell} ( +{rateDifference:0.####} )";
                 }
-                if (newUsdRate < _oldUsdRateSell)
+                if (newUsdRate < _oldExchangeRates.OldUsdRateSell)
                 {
-                    rateAfterCheck = $"{newRateSell} ↓";
+                    rateAfterCheck = $"↓ {newRateSell} ( {rateDifference:0.####} )";
                 }
 
-                _oldUsdRateSell = newUsdRate;
+                _oldExchangeRates.OldUsdRateSell = newUsdRate;
             }
             else
             {
@@ -192,27 +190,44 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             return rateAfterCheck;
         }
 
-        private static string CheckEurRateBuy(string newRateBuy)
+        private string GetEurRates(List<ExchRateRecord> rateRecords, DateTime parsedDate)
         {
-            string rateAfterCheck = null;
+            string? rateResponse;
+            var rateEurBuy = CheckEurRateBuy(rateRecords[1].RateBuy);
+            var rateEurSell = CheckEurRateSell(rateRecords[1].RateSell);
+
+            rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
+            $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
+            $"\r\n-----------------------------------------------------" +
+            $"\r\n  1 Евро ({rateRecords[1].Mnem})" +
+            $"\r\n  покупка     -    {rateEurBuy}" +
+            $"\r\n  продажа    -    {rateEurSell}";
+            return rateResponse;
+        }
+
+        private string CheckEurRateBuy(string newRateBuy)
+        {
+            string? rateAfterCheck = null;
 
             double.TryParse(newRateBuy, NumberStyles.Float, CultureInfo.InvariantCulture, out double newEurRate);
             if (newEurRate != null)
             {
-                if (newEurRate == _oldEurRateBuy)
+                double rateDifference = newEurRate - _oldExchangeRates.OldEurRateBuy;
+
+                if (newEurRate == _oldExchangeRates.OldEurRateBuy)
                 {
                     rateAfterCheck = $"{newRateBuy}";
                 }
-                if (newEurRate > _oldEurRateBuy)
+                if (newEurRate > _oldExchangeRates.OldEurRateBuy)
                 {
-                    rateAfterCheck = $"{newRateBuy} ↑";
+                    rateAfterCheck = $"↑ {newRateBuy} ( +{rateDifference:0.####} )";
                 }
-                if (newEurRate < _oldEurRateBuy)
+                if (newEurRate < _oldExchangeRates.OldEurRateBuy)
                 {
-                    rateAfterCheck = $"{newRateBuy} ↓";
+                    rateAfterCheck = $"↓ {newRateBuy} ( {rateDifference:0.####} )";
                 }
 
-                _oldEurRateBuy = newEurRate;
+                _oldExchangeRates.OldEurRateBuy = newEurRate;
             }
             else
             {
@@ -223,27 +238,29 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             return rateAfterCheck;
         }
 
-        private static string CheckEurRateSell(string newRateSell)
+        private string CheckEurRateSell(string newRateSell)
         {
-            string rateAfterCheck = null;
+            string? rateAfterCheck = null;
 
             double.TryParse(newRateSell, NumberStyles.Float, CultureInfo.InvariantCulture, out double newEurRate);
             if (newEurRate != null)
             {
-                if (newEurRate == _oldEurRateSell)
+                double rateDifference = newEurRate - _oldExchangeRates.OldEurRateSell;
+
+                if (newEurRate == _oldExchangeRates.OldEurRateSell)
                 {
                     rateAfterCheck = $"{newRateSell}";
                 }
-                if (newEurRate > _oldEurRateSell)
+                if (newEurRate > _oldExchangeRates.OldEurRateSell)
                 {
-                    rateAfterCheck = $"{newRateSell} ↑";
+                    rateAfterCheck = $"↑ {newRateSell} ( +{rateDifference:0.####} )";
                 }
-                if (newEurRate < _oldEurRateSell)
+                if (newEurRate < _oldExchangeRates.OldEurRateSell)
                 {
-                    rateAfterCheck = $"{newRateSell} ↓";
+                    rateAfterCheck = $"↓ {newRateSell} ( {rateDifference:0.####} )";
                 }
 
-                _oldEurRateSell = newEurRate;
+                _oldExchangeRates.OldEurRateSell = newEurRate;
             }
             else
             {
@@ -254,27 +271,44 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             return rateAfterCheck;
         }
 
-        private static string CheckRubRateBuy(string newRubRateBuy)
+        private string GetRubRates(List<ExchRateRecord> rateRecords, DateTime parsedDate)
         {
-            string rateAfterCheck = null;
+            string? rateResponse;
+            var rateRubBuy = CheckRubRateBuy(rateRecords[2].RateBuy);
+            var rateRubSell = CheckRubRateSell(rateRecords[2].RateSell);
+
+            rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
+            $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
+            $"\r\n-----------------------------------------------------" +
+            $"\r\n  100 Российских рублей ({rateRecords[2].Mnem})" +
+            $"\r\n  покупка     -    {rateRubBuy}" +
+            $"\r\n  продажа    -    {rateRubSell}";
+            return rateResponse;
+        }
+
+        private string CheckRubRateBuy(string newRubRateBuy)
+        {
+            string? rateAfterCheck = null;
 
             double.TryParse(newRubRateBuy, NumberStyles.Float, CultureInfo.InvariantCulture, out double newRubRate);
             if (newRubRate != null)
             {
-                if (newRubRate == _oldRubRateBuy)
+                double rateDifference = newRubRate - _oldExchangeRates.OldRubRateBuy;
+
+                if (newRubRate == _oldExchangeRates.OldRubRateBuy)
                 {
                     rateAfterCheck = $"{newRubRateBuy}";
                 }
-                if (newRubRate > _oldRubRateBuy)
+                if (newRubRate > _oldExchangeRates.OldRubRateBuy)
                 {
-                    rateAfterCheck = $"{newRubRateBuy} ↑";
+                    rateAfterCheck = $"↑ {newRubRateBuy} ( +{rateDifference:0.####} )";
                 }
-                if (newRubRate < _oldRubRateBuy)
+                if (newRubRate < _oldExchangeRates.OldRubRateBuy)
                 {
-                    rateAfterCheck = $"{newRubRateBuy} ↓";
+                    rateAfterCheck = $"↓ {newRubRateBuy} ( {rateDifference:0.####} )";
                 }
 
-                _oldRubRateBuy = newRubRate;
+                _oldExchangeRates.OldRubRateBuy = newRubRate;
             }
             else
             {
@@ -285,27 +319,29 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             return rateAfterCheck;
         }
 
-        private static string CheckRubRateSell(string newRubRateSell)
+        private string CheckRubRateSell(string newRubRateSell)
         {
-            string rateAfterCheck = null;
+            string? rateAfterCheck = null;
 
             double.TryParse(newRubRateSell, NumberStyles.Float, CultureInfo.InvariantCulture, out double newRubRate);
             if (newRubRate != null)
             {
-                if (newRubRate == _oldRubRateSell)
+                double rateDifference = newRubRate - _oldExchangeRates.OldRubRateSell;
+
+                if (newRubRate == _oldExchangeRates.OldRubRateSell)
                 {
                     rateAfterCheck = $"{newRubRateSell}";
                 }
-                if (newRubRate > _oldRubRateSell)
+                if (newRubRate > _oldExchangeRates.OldRubRateSell)
                 {
-                    rateAfterCheck = $"{newRubRateSell} ↑";
+                    rateAfterCheck = $"↑ {newRubRateSell} ( +{rateDifference:0.####} )";
                 }
-                if (newRubRate < _oldRubRateSell)
+                if (newRubRate < _oldExchangeRates.OldRubRateSell)
                 {
-                    rateAfterCheck = $"{newRubRateSell} ↓";
+                    rateAfterCheck = $"↓ {newRubRateSell} ( {rateDifference:0.####} )";
                 }
 
-                _oldRubRateSell = newRubRate;
+                _oldExchangeRates.OldRubRateSell = newRubRate;
             }
             else
             {
