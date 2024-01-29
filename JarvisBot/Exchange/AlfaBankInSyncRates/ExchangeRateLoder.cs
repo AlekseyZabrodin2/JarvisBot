@@ -1,4 +1,5 @@
 ﻿using JarvisBot.Data;
+using NLog;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -12,6 +13,7 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
     public class ExchangeRateLoder
     {
         private static OldExchangeRates _oldExchangeRates = new ();
+        private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
 
 
         public string RatesResponse(string message)
@@ -87,6 +89,7 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 {
                     xmlString = streamReader.ReadToEnd();
                     Console.WriteLine($"Rate response - {xmlString}");
+                    _logger.Info($"Rate response - {xmlString}");
                 }
 
                 XmlSerializer serializer = new XmlSerializer(typeof(Filials));
@@ -144,7 +147,8 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             else
             {
                 // В случае ошибки преобразования возвращаем пустую строку
-                Console.WriteLine("Ошибка преобразования курса валюты USD.");
+                Console.WriteLine("Ошибка преобразования курса валюты USD Buy.");
+                _logger.Error("Ошибка преобразования курса валюты USD Buy.");
             }
 
             return rateAfterCheck;
@@ -177,7 +181,8 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             else
             {
                 // В случае ошибки преобразования возвращаем пустую строку
-                Console.WriteLine("Ошибка преобразования курса валюты USD.");
+                Console.WriteLine("Ошибка преобразования курса валюты USD Sell.");
+                _logger.Error("Ошибка преобразования курса валюты USD Sell.");
             }
 
             return rateAfterCheck;
@@ -225,7 +230,8 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             else
             {
                 // В случае ошибки преобразования возвращаем пустую строку
-                Console.WriteLine("Ошибка преобразования курса валюты USD.");
+                Console.WriteLine("Ошибка преобразования курса валюты EUR Buy.");
+                _logger.Error("Ошибка преобразования курса валюты EUR Buy.");
             }
 
             return rateAfterCheck;
@@ -258,7 +264,8 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             else
             {
                 // В случае ошибки преобразования возвращаем пустую строку
-                Console.WriteLine("Ошибка преобразования курса валюты EUR.");
+                Console.WriteLine("Ошибка преобразования курса валюты EUR Sell.");
+                _logger.Error("Ошибка преобразования курса валюты EUR Sell.");
             }
 
             return rateAfterCheck;
@@ -306,7 +313,8 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             else
             {
                 // В случае ошибки преобразования возвращаем пустую строку
-                Console.WriteLine("Ошибка преобразования курса валюты RUB.");
+                Console.WriteLine("Ошибка преобразования курса валюты RUB Buy.");
+                _logger.Error("Ошибка преобразования курса валюты RUB Buy.");
             }
 
             return rateAfterCheck;
@@ -339,7 +347,8 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             else
             {
                 // В случае ошибки преобразования возвращаем пустую строку
-                Console.WriteLine("Ошибка преобразования курса валюты RUB.");
+                Console.WriteLine("Ошибка преобразования курса валюты RUB Sell.");
+                _logger.Error("Ошибка преобразования курса валюты RUB Sell.");
             }
 
             return rateAfterCheck;
