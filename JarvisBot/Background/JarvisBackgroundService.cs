@@ -16,7 +16,7 @@ namespace JarvisBot.Background
     {
 
         TelegramBotClient _botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
-        private static readonly ChatId _userChatId = new(TelegramBotConfiguration.LoadChatIdConfiguration());
+        private static readonly ChatId _adminChatId = new(TelegramBotConfiguration.LoadChatIdConfiguration());
         private User _botClientUsername = new();
 
         private static JarvisKeyboardButtons _keyboardButtons = new();
@@ -38,7 +38,7 @@ namespace JarvisBot.Background
                 Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
                 _logger.Info($"Start listening for @{_botClientUsername.Username}");
 
-                await _botClient.SendTextMessageAsync(_userChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
+                await _botClient.SendTextMessageAsync(_adminChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
 
                 _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
 
@@ -87,7 +87,7 @@ namespace JarvisBot.Background
         private void OnProcessExit(object sender, EventArgs e)
         {
             _logger.Info("Для меня честь быть с Вами");
-            _botClient.SendTextMessageAsync(_userChatId, "Для меня честь быть с Вами");
+            _botClient.SendTextMessageAsync(_adminChatId, "Для меня честь быть с Вами");
         }
     }
 }

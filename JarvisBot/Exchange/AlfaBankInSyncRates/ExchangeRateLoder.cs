@@ -13,13 +13,6 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
     {
         private static OldExchangeRates _oldExchangeRates = new ();
 
-        //private static double _oldUsdRateBuy = 3.25;
-        //private static double _oldUsdRateSell;
-        //private static double _oldEurRateBuy;
-        //private static double _oldEurRateSell;
-        //private static double _oldRubRateBuy;
-        //private static double _oldRubRateSell;
-
 
         public string RatesResponse(string message)
         {

@@ -1,4 +1,5 @@
-﻿using JarvisBot.Exchange.AlfaBankInSyncRates;
+﻿using JarvisBot.Data;
+using JarvisBot.Exchange.AlfaBankInSyncRates;
 using JarvisBot.KeyboardButtons;
 using JarvisBot.Weather;
 using NLog;
@@ -13,7 +14,7 @@ namespace JarvisBot
 {
     public class CommunicationMethods
     {
-
+        private static readonly ChatId _adminChatId = new(TelegramBotConfiguration.LoadChatIdConfiguration());
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static Message _botMessage = new();
@@ -106,7 +107,7 @@ namespace JarvisBot
 
         public async Task HandleHelpButtonAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text.Contains("Help", StringComparison.CurrentCultureIgnoreCase))
+            if (message.Text.Contains("Help", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?", replyMarkup: _keyboardButtons.GetHelpButtons());
             }
@@ -114,7 +115,7 @@ namespace JarvisBot
 
         public async Task HandleDeviceButtonAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "Device")
+            if (message.Text == "Device" && message.Chat.Id == _adminChatId)
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы уверены?", replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
             }
@@ -216,7 +217,7 @@ namespace JarvisBot
 
         public async Task HandleRebootButtonAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "Something")
+            if (message.Text == "Something" && message.Chat.Id == _adminChatId)
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управлением компьютера:", replyMarkup: _keyboardButtons.GetRebootButtons());
             }
