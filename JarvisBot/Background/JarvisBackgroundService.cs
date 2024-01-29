@@ -65,8 +65,7 @@ namespace JarvisBot.Background
                 return;
             }
 
-            Console.WriteLine($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
-            _logger.Info($"Отправитель - {message.Chat.FirstName}  ||  сообщение - '{message.Text}' ");
+            WriteRequestToBotMessage(message);
 
             await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername);
         }
@@ -82,6 +81,20 @@ namespace JarvisBot.Background
             _logger.Error(ErrorMessage);
             Console.WriteLine(ErrorMessage);
             return Task.CompletedTask;
+        }
+
+        private void WriteRequestToBotMessage(Message message)
+        {
+            if (message.Chat.Username == null)
+            {
+                Console.WriteLine($"Отправитель --> {message.Chat.FirstName} {message.Chat.LastName}({message.Chat.Id}) ||  сообщение - '{message.Text}' ");
+                _logger.Info($"Отправитель --> {message.Chat.FirstName} {message.Chat.LastName}({message.Chat.Id})  ||  сообщение - '{message.Text}' ");
+            }
+            else
+            {
+                Console.WriteLine($"Отправитель --> {message.Chat.Username}({message.Chat.Id}) ||  сообщение - '{message.Text}' ");
+                _logger.Info($"Отправитель --> {message.Chat.Username}({message.Chat.Id})  ||  сообщение - '{message.Text}' ");
+            }
         }
 
         private void OnProcessExit(object sender, EventArgs e)

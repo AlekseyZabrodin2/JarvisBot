@@ -16,8 +16,32 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] {"Help", "Курсы валют"},
-                    new KeyboardButton[] {"Help", "Погода"},
+                    new KeyboardButton[] { "Погода", "Курсы валют"}
+                })
+            {
+                ResizeKeyboard = true
+            };
+            return replyKeyboard;
+        }
+
+        public IReplyMarkup GetAdminMenuButtons()
+        {
+            ReplyKeyboardMarkup replyKeyboard = new(new[]
+                {
+                    new KeyboardButton[] { "Погода", "Курсы валют"},
+                    new KeyboardButton[] {"Help"}
+                })
+            {
+                ResizeKeyboard = true
+            };
+            return replyKeyboard;
+        }
+
+        public IReplyMarkup GetHelpButtons()
+        {
+            ReplyKeyboardMarkup replyKeyboard = new(new[]
+                {
+                    new KeyboardButton[] {"Help"}
                 })
             {
                 ResizeKeyboard = true
@@ -38,7 +62,7 @@ namespace JarvisBot.KeyboardButtons
             return replyKeyboard;
         }
 
-        public IReplyMarkup GetHelpButtons()
+        public IReplyMarkup GetHelpSubmenuButtons()
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {

@@ -23,7 +23,7 @@ namespace JarvisBot
 
 
         public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername)
-        {            
+        {
             await HandleGreetingAsync(botClient, message);
             await HandleMenuAsync(botClient, message);
             await HandleCurrencyAsync(botClient, message);
@@ -36,7 +36,7 @@ namespace JarvisBot
 
             await HandleRebootButtonAsync(botClient, message);
 
-            WriteBotMessage(botUsername, _botMessage);
+            WriteAnswerBotMessage(botUsername, _botMessage);
         }
 
         public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query)
@@ -46,11 +46,19 @@ namespace JarvisBot
         }
 
 
-        private static void WriteBotMessage(User botUsername, Message message)
+        private static void WriteAnswerBotMessage(User botUsername, Message message)
         {
+            if (message.Chat.Username == null)
+            {
+                Console.WriteLine($"Ответ - {botUsername.Username} --> {message.Chat.FirstName} {message.Chat.LastName}({message.Chat.Id})) || сообщение - '{message.Text}' ");
+                _logger.Info($"Ответ - {botUsername.Username} --> {message.Chat.FirstName} {message.Chat.LastName}({message.Chat.Id})) || сообщение - '{message.Text}' ");
+            }
+            else
+            {
+                Console.WriteLine($"Ответ - {botUsername.Username} --> {message.Chat.Username}({message.Chat.Id})) || сообщение - '{message.Text}' ");
+                _logger.Info($"Ответ - {botUsername.Username} --> {message.Chat.Username}({message.Chat.Id})) || сообщение - '{message.Text}' ");
+            }
 
-            Console.WriteLine($"Ответ - {botUsername.Username}  ||  сообщение - '{message.Text}' ");
-            _logger.Info($"Ответ - {botUsername.Username}  ||  сообщение - '{message.Text}' ");
             _botMessage.Text = string.Empty;
         }
 
@@ -66,7 +74,14 @@ namespace JarvisBot
         {
             if (message.Text == "< Back")
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ", replyMarkup: _keyboardButtons.GetMenuButtons());
+                if (message.Text == "< Back" && message.Chat.Id == _adminChatId)
+                {
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
+                }
+                else
+                {
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ", replyMarkup: _keyboardButtons.GetMenuButtons());
+                }                
             }
         }
 
@@ -75,7 +90,15 @@ namespace JarvisBot
             if (message.Text.Contains("Меню", StringComparison.CurrentCultureIgnoreCase) ||
                 message.Text.Contains("Menu", StringComparison.CurrentCultureIgnoreCase))
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose", replyMarkup: _keyboardButtons.GetMenuButtons());
+                if (message.Text.Contains("Меню", StringComparison.CurrentCultureIgnoreCase) ||
+                    message.Text.Contains("Menu", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
+                {
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
+                }
+                else
+                {
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose", replyMarkup: _keyboardButtons.GetMenuButtons());
+                }
             }
         }
 
@@ -103,13 +126,13 @@ namespace JarvisBot
                 var weatuerMessage = WeatherLoder.WeatherResponse();
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
             }
-        }        
+        }
 
         public async Task HandleHelpButtonAsync(ITelegramBotClient botClient, Message message)
         {
             if (message.Text.Contains("Help", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?", replyMarkup: _keyboardButtons.GetHelpButtons());
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?", replyMarkup: _keyboardButtons.GetHelpSubmenuButtons());
             }
         }
 
@@ -120,17 +143,17 @@ namespace JarvisBot
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы уверены?", replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
             }
         }
-                
+
         public async Task HandleStartAnyDeskAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery)
         {
             if (callbackQuery.Data == "Start_AnyDesk")
-            {            
+            {
                 await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "AnyDesk включается...");
                 StartAnyDesk(botClient, _botMessage);
             }
             else if (callbackQuery.Data == "Cancel_AnyDesk")
             {
-                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Выключение AnyDesk.", replyMarkup: _keyboardButtons.GetMenuButtons());
+                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Выключение AnyDesk.", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
                 await StopAnyDesk(botClient, _botMessage);
             }
         }
@@ -173,11 +196,11 @@ namespace JarvisBot
             {
                 botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk уже запущен");
                 Console.WriteLine("AnyDesk уже запущен");
-            }                      
+            }
         }
 
         public async Task<bool> StopAnyDesk(ITelegramBotClient botClient, Message message)
-        {            
+        {
             if (_anyDeskProcess != null)
             {
                 await CloseAnyDeskProcesses(botClient, message);
