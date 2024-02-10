@@ -49,6 +49,18 @@ namespace JarvisBot.KeyboardButtons
             return replyKeyboard;
         }
 
+        public IReplyMarkup GetBackButtons()
+        {
+            ReplyKeyboardMarkup replyKeyboard = new(new[]
+                {
+                    new KeyboardButton[] {"< Back"}
+                })
+            {
+                ResizeKeyboard = true
+            };
+            return replyKeyboard;
+        }
+
         public IReplyMarkup GetMoneyButtons()
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]

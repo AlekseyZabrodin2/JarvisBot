@@ -41,8 +41,8 @@ namespace JarvisBot.Weather
 
         private static string FactWeatherPartTwo(WeatherBaseModel apiResponse)
         {
-            var forecastWeather = $"  Минск  " +
-                                $"\r\n{apiResponse.Fact.Temp}°C" +
+            var forecastWeather = $"   Минск  " +
+                                $"\r\n {apiResponse.Fact.Temp}°C" +
                                 $"\r\n {DisplayWeatherInfo.DisplayFactInformation(apiResponse.Fact.Condition)}" +
                                 $"\r\n Ощущается как: {apiResponse.Fact.FeelsLike}°C" +
                                 $"\r\n Ветер {DisplayWeatherInfo.DetermineWindStrengthCategory(apiResponse.Fact.WindSpeed)}: {apiResponse.Fact.WindSpeed} м/с, {DisplayWeatherInfo.DisplayFactInformation(apiResponse.Fact.WindDir)}";

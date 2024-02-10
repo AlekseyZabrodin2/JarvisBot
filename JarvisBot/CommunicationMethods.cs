@@ -19,7 +19,7 @@ namespace JarvisBot
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static Message _botMessage = new();
         private static ExchangeRateLoder _exchangeRateLoder = new();
-        private Process _anyDeskProcess;
+        private Process? _anyDeskProcess;
 
 
         public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername)
@@ -36,7 +36,12 @@ namespace JarvisBot
 
             await HandleRebootButtonAsync(botClient, message);
 
-            WriteAnswerBotMessage(botUsername, _botMessage);
+            if (_botMessage.Text == null || _botMessage.Text == string.Empty)
+            {
+                await HandleUnknownMessageAsync(botClient, message);             
+            }
+            
+            WriteAnswerInBotConsole(botUsername, _botMessage);
         }
 
         public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query)
@@ -46,7 +51,7 @@ namespace JarvisBot
         }
 
 
-        private static void WriteAnswerBotMessage(User botUsername, Message message)
+        private static void WriteAnswerInBotConsole(User botUsername, Message message)
         {
             if (message.Chat.Username == null)
             {
@@ -76,11 +81,13 @@ namespace JarvisBot
             {
                 if (message.Text == "< Back" && message.Chat.Id == _adminChatId)
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ",
+                        replyMarkup: _keyboardButtons.GetAdminMenuButtons());
                 }
                 else
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ", replyMarkup: _keyboardButtons.GetMenuButtons());
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ",
+                        replyMarkup: _keyboardButtons.GetMenuButtons());
                 }                
             }
         }
@@ -93,11 +100,13 @@ namespace JarvisBot
                 if (message.Text.Contains("Меню", StringComparison.CurrentCultureIgnoreCase) ||
                     message.Text.Contains("Menu", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose",
+                        replyMarkup: _keyboardButtons.GetAdminMenuButtons());
                 }
                 else
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose", replyMarkup: _keyboardButtons.GetMenuButtons());
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose",
+                        replyMarkup: _keyboardButtons.GetMenuButtons());
                 }
             }
         }
@@ -106,7 +115,8 @@ namespace JarvisBot
         {
             if (message.Text.Contains("Курсы валют", StringComparison.CurrentCultureIgnoreCase))
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту", replyMarkup: _keyboardButtons.GetMoneyButtons());
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту", 
+                    replyMarkup: _keyboardButtons.GetMoneyButtons());
             }
         }
 
@@ -132,7 +142,8 @@ namespace JarvisBot
         {
             if (message.Text.Contains("Help", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?", replyMarkup: _keyboardButtons.GetHelpSubmenuButtons());
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?", 
+                    replyMarkup: _keyboardButtons.GetHelpSubmenuButtons());
             }
         }
 
@@ -140,7 +151,11 @@ namespace JarvisBot
         {
             if (message.Text == "Device" && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы уверены?", replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы в меню управления программой - [AnyDesk]", 
+                    replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
+
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что сделать с программой, Сэр?",
+                    replyMarkup: _keyboardButtons.GetBackButtons());
             }
         }
 
@@ -242,8 +257,12 @@ namespace JarvisBot
         {
             if (message.Text == "Something" && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управлением компьютера:", replyMarkup: _keyboardButtons.GetRebootButtons());
-            }
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управления компьютером:", 
+                    replyMarkup: _keyboardButtons.GetRebootButtons());
+
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Еще не поздно вернуться назад, Сэр.",
+                    replyMarkup: _keyboardButtons.GetBackButtons());
+            }            
         }
 
         public async Task HandleRebootPCAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery)
@@ -275,6 +294,9 @@ namespace JarvisBot
             Process.Start(powerOffPC);
         }
 
-
+        public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)
+        {
+            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Я отправлю эту информацию в архив, Сэр !");            
+        }
     }
 }
