@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Telegram.Bot.Types;
-using Telegram.Bot.Types.ReplyMarkups;
+﻿using Telegram.Bot.Types.ReplyMarkups;
 
 namespace JarvisBot.KeyboardButtons
 {
@@ -109,7 +103,8 @@ namespace JarvisBot.KeyboardButtons
                 {
                     InlineKeyboardButton.WithCallbackData(text: "Reboot", callbackData: "PC_Reboot"),
                     InlineKeyboardButton.WithCallbackData(text: "Power OFF", callbackData: "PC_PowerOFF"),
-                }
+                },
+                new [] {InlineKeyboardButton.WithCallbackData(text: "Lock PC", callbackData: "PC_Lock")}
             });
 
             return inlineKeyboard;

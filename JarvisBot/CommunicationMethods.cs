@@ -277,6 +277,11 @@ namespace JarvisBot
                 await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "ВЫКЛЮЧЕНИЕ компьютера...");
                 PowerOffPcClick(botClient, _botMessage);
             }
+            else if (callbackQuery.Data == "PC_Lock")
+            {
+                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Компьютер ЗАБЛОКИРОВАН, сэр !");
+                LockPcClick(botClient, _botMessage);
+            }
         }
 
         public void RebootPcClick(ITelegramBotClient botClient, Message message)
@@ -292,6 +297,12 @@ namespace JarvisBot
         {
             string powerOffPC = @"D:\Develop\PowerOFF.bat";
             Process.Start(powerOffPC);
+        }
+
+        public void LockPcClick(ITelegramBotClient botClient, Message message)
+        {
+            string lockPC = @"D:\Develop\LockPC.bat";
+            Process.Start(lockPC);
         }
 
         public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)
