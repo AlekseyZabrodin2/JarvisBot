@@ -44,10 +44,12 @@ namespace JarvisBot
             WriteAnswerInBotConsole(botUsername, _botMessage);
         }
 
-        public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query)
+        public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query, User botUsername)
         {
             await HandleStartAnyDeskAsync(botClient, query);
             await HandleRebootPCAsync(botClient, query);
+
+            WriteAnswerInBotConsole(botUsername, _botMessage);
         }
 
 
@@ -163,17 +165,17 @@ namespace JarvisBot
         {
             if (callbackQuery.Data == "Start_AnyDesk")
             {
-                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "AnyDesk включается...");
+                _botMessage = await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "AnyDesk включается...");
                 StartAnyDesk(botClient, _botMessage);
             }
             else if (callbackQuery.Data == "Cancel_AnyDesk")
             {
-                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Выключение AnyDesk.", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
+                _botMessage = await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Выключение AnyDesk.", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
                 await StopAnyDesk(botClient, _botMessage);
             }
         }
 
-        public void StartAnyDesk(ITelegramBotClient botClient, Message message)
+        public async void StartAnyDesk(ITelegramBotClient botClient, Message message)
         {
             if (!Process.GetProcessesByName("AnyDesk").Any())
             {
@@ -194,12 +196,12 @@ namespace JarvisBot
 
                     if (Process.GetProcessesByName("AnyDesk").Any())
                     {
-                        botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk запущен");
+                        _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk запущен");
                         Console.WriteLine("AnyDesk запущен");
                     }
                     else
                     {
-                        botClient.SendTextMessageAsync(message.Chat.Id, "Проблемы с запуском...");
+                        _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Проблемы с запуском...");
                     }
                 }
                 catch (System.ComponentModel.Win32Exception ex)
@@ -225,17 +227,17 @@ namespace JarvisBot
 
             if (!Process.GetProcessesByName("AnyDesk").Any())
             {
-                await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
                 Console.WriteLine("AnyDesk закрыт");
             }
             else
             {
-                await botClient.SendTextMessageAsync(message.Chat.Id, "... закрываем AnyDesk повторно");
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "... закрываем AnyDesk повторно");
                 Console.WriteLine("... закрываем AnyDesk повторно");
 
                 await CloseAnyDeskProcesses(botClient, message);
 
-                await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
                 Console.WriteLine("AnyDesk закрыт");
             }
 
@@ -248,7 +250,7 @@ namespace JarvisBot
             {
                 process.Kill();
 
-                await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрывается...");
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрывается...");
                 Console.WriteLine("AnyDesk закрывается...");
             }
         }
@@ -267,42 +269,38 @@ namespace JarvisBot
 
         public async Task HandleRebootPCAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery)
         {
+            var chatId = _botMessage.Chat?.Id ?? 552523783;
+
             if (callbackQuery.Data == "PC_Reboot")
-            {
-                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Ждите компьютер ПЕРЕЗАГРУЖАЕТСЯ...");
+            {                
+                _botMessage = await botClient.SendTextMessageAsync(chatId, "Ждите компьютер ПЕРЕЗАГРУЖАЕТСЯ...");
                 RebootPcClick(botClient, _botMessage);
             }
             else if (callbackQuery.Data == "PC_PowerOFF")
             {
-                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "ВЫКЛЮЧЕНИЕ компьютера...");
+                _botMessage = await botClient.SendTextMessageAsync(chatId, "ВЫКЛЮЧЕНИЕ компьютера...");
                 PowerOffPcClick(botClient, _botMessage);
             }
-            else if (callbackQuery.Data == "PC_Lock")
-            {
-                await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Компьютер ЗАБЛОКИРОВАН, сэр !");
-                LockPcClick(botClient, _botMessage);
-            }
         }
 
-        public void RebootPcClick(ITelegramBotClient botClient, Message message)
+        public async void RebootPcClick(ITelegramBotClient botClient, Message message)
         {
-            string rebootPC = @"D:\Develop\Reboot.bat";
-            Process.Start(rebootPC);
-
-            botClient.SendTextMessageAsync(message.Chat.Id, "Ждите Я скоро ..!");
+            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Ждите Я скоро ..!");
             Console.WriteLine("Ждите Я скоро ..!");
+
+            string rebootPC = "shutdown";
+            string arguments = "/r /t 1";
+            Process.Start(rebootPC, arguments);            
         }
 
-        public void PowerOffPcClick(ITelegramBotClient botClient, Message message)
+        public async void PowerOffPcClick(ITelegramBotClient botClient, Message message)
         {
-            string powerOffPC = @"D:\Develop\PowerOFF.bat";
-            Process.Start(powerOffPC);
-        }
+            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "До скорого, сэр");
+            Console.WriteLine("До скорого, сэр");
 
-        public void LockPcClick(ITelegramBotClient botClient, Message message)
-        {
-            string lockPC = @"D:\Develop\LockPC.bat";
-            Process.Start(lockPC);
+            string powerOffPC = "shutdown";
+            string arguments = "/s /f /t 0";
+            Process.Start(powerOffPC, arguments);
         }
 
         public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)

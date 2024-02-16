@@ -56,7 +56,7 @@ namespace JarvisBot.Background
 
             if (update.Type == UpdateType.CallbackQuery)
             {
-                await _communicationMethods.ProcessingCallback(botClient, callbackQuery);
+                await _communicationMethods.ProcessingCallback(botClient, callbackQuery, _botClientUsername);
                 return;
             }
 
