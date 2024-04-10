@@ -28,23 +28,34 @@ namespace JarvisBot.Background
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            _logger.Info("Sending connection requests");
+
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                using var tocen = new CancellationTokenSource();
+                try
+                {
+                    using var tocen = new CancellationTokenSource();
 
-                _botClientUsername = await _botClient.GetMeAsync();
-                Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
-                _logger.Info($"Start listening for @{_botClientUsername.Username}");
+                    _botClientUsername = await _botClient.GetMeAsync();
+                    Console.WriteLine($"Start listening for @{_botClientUsername.Username}");
+                    _logger.Info($"Start listening for @{_botClientUsername.Username}");
 
-                await _botClient.SendTextMessageAsync(_adminChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
+                    await _botClient.SendTextMessageAsync(_adminChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
 
-                _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
+                    _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
 
-                Console.WriteLine("Программа запущена !!!");
-                await Task.Delay(1000, stoppingToken);
-                return;
+                    _logger.Info("Request was sent successfully, the connection is established");
+                    Console.WriteLine("Программа запущена !!!");
+                    await Task.Delay(1000, stoppingToken);
+                    return;
+                }
+                catch (Exception exeption)
+                {
+                    _logger.Error($"Jarvis don`t ExecuteAsync - {exeption}");
+                    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+                }
             }
         }
 
@@ -78,7 +89,7 @@ namespace JarvisBot.Background
                     => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
                 _ => exception.ToString()
             };
-            _logger.Error(ErrorMessage);
+            _logger.Error($"Error in HandlePollingErrorAsync - {ErrorMessage}");
             Console.WriteLine(ErrorMessage);
             return Task.CompletedTask;
         }
