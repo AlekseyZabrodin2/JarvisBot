@@ -4,9 +4,11 @@ using JarvisBot.KeyboardButtons;
 using JarvisBot.Weather;
 using NLog;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Timers;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 
@@ -22,12 +24,12 @@ namespace JarvisBot
         private Process? _anyDeskProcess;
 
 
-        public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername)
+        public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername, Timer timer)
         {
             await HandleGreetingAsync(botClient, message);
             await HandleMenuAsync(botClient, message);
             await HandleCurrencyAsync(botClient, message);
-            await HandleRatesAsync(botClient, message);
+            await HandleRatesAsync(botClient, message, timer);
             await HandleWeatherAsync(botClient, message);
             await HandleBackToMenuAsync(botClient, message);
 
@@ -122,14 +124,56 @@ namespace JarvisBot
             }
         }
 
-        public async Task HandleRatesAsync(ITelegramBotClient botClient, Message message)
+        public async Task HandleRatesAsync(ITelegramBotClient botClient, Message message, Timer timer)
         {
             if (message.Text == "USD" || message.Text == "EUR" || message.Text == "RUB")
             {
                 var rateMessage = _exchangeRateLoder.RatesResponse(message.Text);
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
+
+                if (!timer.Enabled)
+                {
+                    _logger.Info("Start the Timer for update rate");
+                    SetTimer(botClient, message, timer);
+                }
             }
         }
+
+        private void SetTimer(ITelegramBotClient botClient, Message message, Timer timer)
+        {
+            timer = new Timer();
+            timer.Interval = TimeSpan.FromMinutes(10).TotalMilliseconds;
+            _logger.Trace($"Timer started for {timer.Interval}");
+            timer.Elapsed += (sender, e) => OnTimedEvent(botClient, message, sender, e);
+            timer.AutoReset = true;
+            timer.Enabled = true;
+        }
+
+        private void OnTimedEvent(ITelegramBotClient botClient, Message message, Object source, ElapsedEventArgs e)
+        {
+            _logger.Trace("Rate updating");
+
+            var currencies = new List<string> { "USD", "EUR", "RUB" };
+            string? updateRate = null;
+
+            foreach (string rate in currencies)
+            {
+                updateRate = _exchangeRateLoder.EqualityCurrencyExchangeRate(rate);
+
+                if (updateRate != null)
+                {
+                    HandleUpdateRatesAsync(botClient, message, updateRate);
+                }
+                _logger.Trace("Rate has not been updated");
+            }
+        }
+
+        public async Task HandleUpdateRatesAsync(ITelegramBotClient botClient, Message message, string rateMessage)
+        {
+            _logger.Info($"Rate is updating - {rateMessage}");
+            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
+        }
+
 
         public async Task HandleWeatherAsync(ITelegramBotClient botClient, Message message)
         {
