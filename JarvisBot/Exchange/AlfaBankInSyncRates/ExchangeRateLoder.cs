@@ -5,8 +5,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
+using Telegram.Bot.Types;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JarvisBot.Exchange.AlfaBankInSyncRates
 {
@@ -14,6 +17,7 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
     {
         private static OldExchangeRates _oldExchangeRates = new ();
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
+        private bool _rateIsUpdate = false;
 
 
         public string RatesResponse(string message)
@@ -53,8 +57,6 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 {
                     rateResponse = GetRubRates(rateRecords, parsedDate);
                 }
-
-                _oldExchangeRates.WriteJsonFile();
 
                 return rateResponse;
             }
@@ -133,16 +135,20 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 {
                     rateAfterCheck = $"{newRateBuy}";
                 }
-                if (newUsdRate > _oldExchangeRates.OldUsdRateBuy)
+                else if (newUsdRate > _oldExchangeRates.OldUsdRateBuy)
                 {
                     rateAfterCheck = $"↑ {newRateBuy} ( +{rateDifference:0.####} )";
+                    _rateIsUpdate = true ;
+                    _oldExchangeRates.OldUsdRateBuy = newUsdRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-                if (newUsdRate < _oldExchangeRates.OldUsdRateBuy)
+                else if (newUsdRate < _oldExchangeRates.OldUsdRateBuy)
                 {
                     rateAfterCheck = $"↓ {newRateBuy} ( {rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldUsdRateBuy = newUsdRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-
-                _oldExchangeRates.OldUsdRateBuy = newUsdRate;
             }
             else
             {
@@ -167,16 +173,20 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 {
                     rateAfterCheck = $"{newRateSell}";
                 }
-                if (newUsdRate > _oldExchangeRates.OldUsdRateSell)
+                else if (newUsdRate > _oldExchangeRates.OldUsdRateSell)
                 {
                     rateAfterCheck = $"↑ {newRateSell} ( +{rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldUsdRateSell = newUsdRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-                if (newUsdRate < _oldExchangeRates.OldUsdRateSell)
+                else if (newUsdRate < _oldExchangeRates.OldUsdRateSell)
                 {
                     rateAfterCheck = $"↓ {newRateSell} ( {rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldUsdRateSell = newUsdRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-
-                _oldExchangeRates.OldUsdRateSell = newUsdRate;
             }
             else
             {
@@ -216,16 +226,20 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 {
                     rateAfterCheck = $"{newRateBuy}";
                 }
-                if (newEurRate > _oldExchangeRates.OldEurRateBuy)
+                else if (newEurRate > _oldExchangeRates.OldEurRateBuy)
                 {
                     rateAfterCheck = $"↑ {newRateBuy} ( +{rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldEurRateBuy = newEurRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-                if (newEurRate < _oldExchangeRates.OldEurRateBuy)
+                else if (newEurRate < _oldExchangeRates.OldEurRateBuy)
                 {
                     rateAfterCheck = $"↓ {newRateBuy} ( {rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldEurRateBuy = newEurRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-
-                _oldExchangeRates.OldEurRateBuy = newEurRate;
             }
             else
             {
@@ -250,16 +264,20 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 {
                     rateAfterCheck = $"{newRateSell}";
                 }
-                if (newEurRate > _oldExchangeRates.OldEurRateSell)
+                else if (newEurRate > _oldExchangeRates.OldEurRateSell)
                 {
                     rateAfterCheck = $"↑ {newRateSell} ( +{rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldEurRateSell = newEurRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-                if (newEurRate < _oldExchangeRates.OldEurRateSell)
+                else if (newEurRate < _oldExchangeRates.OldEurRateSell)
                 {
                     rateAfterCheck = $"↓ {newRateSell} ( {rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldEurRateSell = newEurRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-
-                _oldExchangeRates.OldEurRateSell = newEurRate;
             }
             else
             {
@@ -299,16 +317,20 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 {
                     rateAfterCheck = $"{newRubRateBuy}";
                 }
-                if (newRubRate > _oldExchangeRates.OldRubRateBuy)
+                else if (newRubRate > _oldExchangeRates.OldRubRateBuy)
                 {
                     rateAfterCheck = $"↑ {newRubRateBuy} ( +{rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldRubRateBuy = newRubRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-                if (newRubRate < _oldExchangeRates.OldRubRateBuy)
+                else if(newRubRate < _oldExchangeRates.OldRubRateBuy)
                 {
                     rateAfterCheck = $"↓ {newRubRateBuy} ( {rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldRubRateBuy = newRubRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-
-                _oldExchangeRates.OldRubRateBuy = newRubRate;
             }
             else
             {
@@ -333,16 +355,20 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 {
                     rateAfterCheck = $"{newRubRateSell}";
                 }
-                if (newRubRate > _oldExchangeRates.OldRubRateSell)
+                else if (newRubRate > _oldExchangeRates.OldRubRateSell)
                 {
                     rateAfterCheck = $"↑ {newRubRateSell} ( +{rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldRubRateSell = newRubRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-                if (newRubRate < _oldExchangeRates.OldRubRateSell)
+                else if (newRubRate < _oldExchangeRates.OldRubRateSell)
                 {
                     rateAfterCheck = $"↓ {newRubRateSell} ( {rateDifference:0.####} )";
+                    _rateIsUpdate = true;
+                    _oldExchangeRates.OldRubRateSell = newRubRate;
+                    _oldExchangeRates.WriteJsonFile();
                 }
-
-                _oldExchangeRates.OldRubRateSell = newRubRate;
             }
             else
             {
@@ -352,6 +378,19 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             }
 
             return rateAfterCheck;
+        }
+
+        public string EqualityCurrencyExchangeRate(string rate)
+        {
+            string? newRate = null;
+
+            var updateRate = RatesResponse(rate);
+            if (_rateIsUpdate)
+            {
+                newRate = updateRate;
+                _rateIsUpdate = false;
+            }
+            return newRate;
         }
 
     }
