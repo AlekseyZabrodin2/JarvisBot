@@ -23,7 +23,6 @@ namespace JarvisBot.Background
         private static CommunicationMethods _communicationMethods = new();
 
         private ILogger _logger = LogManager.GetCurrentClassLogger();
-        private static System.Timers.Timer _timer = new();
 
 
 
@@ -79,7 +78,7 @@ namespace JarvisBot.Background
 
             WriteRequestToBotMessage(message);
 
-            await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername, _timer);
+            await _communicationMethods.ProcessingMessage(botClient, message, _botClientUsername, cancellationToken);
         }
 
         private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -111,10 +110,8 @@ namespace JarvisBot.Background
 
         private void OnProcessExit(object sender, EventArgs e)
         {
-            _timer.Stop();
-            _timer.Dispose();
-            _logger.Info("Для меня честь быть с Вами");
-            _botClient.SendTextMessageAsync(_adminChatId, "Для меня честь быть с Вами");
+            _logger.Info("До скорого, для меня честь быть с Вами");
+            _botClient.SendTextMessageAsync(_adminChatId, "До скорого, для меня честь быть с Вами");
         }
     }
 }
