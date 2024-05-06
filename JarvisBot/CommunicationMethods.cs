@@ -3,10 +3,12 @@ using JarvisBot.Exchange.AlfaBankInSyncRates;
 using JarvisBot.KeyboardButtons;
 using JarvisBot.Weather;
 using NLog;
+using NLog.Fluent;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Telegram.Bot;
@@ -20,16 +22,21 @@ namespace JarvisBot
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static Message _botMessage = new();
+        private ITelegramBotClient _botClient;
         private static ExchangeRateLoder _exchangeRateLoder = new();
         private Process? _anyDeskProcess;
+        private CancellationTokenSource _cancellationToken;
+        private TimerManager _timerManager = new();
+        private bool _messageInProcess;
 
 
-        public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername, Timer timer)
+        public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername, CancellationToken cancellationToken)
         {
+            _botClient = botClient;
             await HandleGreetingAsync(botClient, message);
             await HandleMenuAsync(botClient, message);
             await HandleCurrencyAsync(botClient, message);
-            await HandleRatesAsync(botClient, message, timer);
+            await HandleRatesAsync(botClient, message);
             await HandleWeatherAsync(botClient, message);
             await HandleBackToMenuAsync(botClient, message);
 
@@ -40,9 +47,9 @@ namespace JarvisBot
 
             if (_botMessage.Text == null || _botMessage.Text == string.Empty)
             {
-                await HandleUnknownMessageAsync(botClient, message);             
+                await HandleUnknownMessageAsync(botClient, message);
             }
-            
+
             WriteAnswerInBotConsole(botUsername, _botMessage);
         }
 
@@ -92,7 +99,7 @@ namespace JarvisBot
                 {
                     _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ",
                         replyMarkup: _keyboardButtons.GetMenuButtons());
-                }                
+                }
             }
         }
 
@@ -124,47 +131,109 @@ namespace JarvisBot
             }
         }
 
-        public async Task HandleRatesAsync(ITelegramBotClient botClient, Message message, Timer timer)
+        public async Task HandleRatesAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "USD" || message.Text == "EUR" || message.Text == "RUB")
+            try
             {
-                var rateMessage = _exchangeRateLoder.RatesResponse(message.Text);
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
+                _cancellationToken = new();
 
-                if (!timer.Enabled)
+                if (message.Text == "USD" || message.Text == "EUR" || message.Text == "RUB")
                 {
-                    _logger.Info("Start the Timer for update rate");
-                    SetTimer(botClient, message, timer);
+                    _cancellationToken.Cancel();
+
+                    _messageInProcess = true;
+                    var rateMessage = _exchangeRateLoder.RatesResponse(message.Text, _cancellationToken.Token);
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
+                    _messageInProcess = false;
+                    _cancellationToken = new();
+
+                    _logger.Info("SetTimer for update rate");
+                    SetTimer(_cancellationToken.Token);
                 }
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.Error($"The operation was canceled in HandleRatesAsync - [{ex}]");
             }
         }
 
-        private void SetTimer(ITelegramBotClient botClient, Message message, Timer timer)
+        private void SetTimer(CancellationToken cancellationToken)
         {
-            timer = new Timer();
-            timer.Interval = TimeSpan.FromMinutes(10).TotalMilliseconds;
-            _logger.Trace($"Timer started for {timer.Interval}");
-            timer.Elapsed += (sender, e) => OnTimedEvent(botClient, message, sender, e);
-            timer.AutoReset = true;
-            timer.Enabled = true;
+            if (cancellationToken.IsCancellationRequested)
+            {
+                _messageInProcess = true;
+                _timerManager.StopTimer("Timer1");
+                _logger.Debug("Timer is stopped because triggered token");
+                return;
+            }
+
+            _timerManager.StopTimer("Timer1");
+            _logger.Debug("Previously started timers have been stopped");
+
+            
+            if (_timerManager.Timer == null || !_timerManager.TimerId.Contains("Timer1"))
+            {
+                _timerManager.CreateTimer("Timer1", 30);
+            }
+
+            _timerManager.Timer!.Elapsed -= OnTimedEvent;
+
+            _logger.Trace($"New Timer {_timerManager.TimerId} is started ");
+            _timerManager.Timer.Elapsed += OnTimedEvent;
+            
+            if (_timerManager.Timer.Enabled)
+            {
+                _timerManager.StopTimer("Timer1");
+            }
+            _timerManager.StartTimer("Timer1");
+            _logger.Trace("Timer is started in SetTimer method");
         }
 
-        private void OnTimedEvent(ITelegramBotClient botClient, Message message, Object source, ElapsedEventArgs e)
+        private async void OnTimedEvent(Object source, ElapsedEventArgs e)
         {
-            _logger.Trace("Rate updating");
-
-            var currencies = new List<string> { "USD", "EUR", "RUB" };
-            string? updateRate = null;
-
-            foreach (string rate in currencies)
+            try
             {
-                updateRate = _exchangeRateLoder.EqualityCurrencyExchangeRate(rate);
+                CancellationToken cancellationToken = _cancellationToken.Token;
 
-                if (updateRate != null)
+                if (_messageInProcess)
                 {
-                    HandleUpdateRatesAsync(botClient, message, updateRate);
+                    _logger.Info("Message in process return from method OnTimedEvent!");
+                    return;
                 }
-                _logger.Trace("Rate has not been updated");
+                _logger.Trace("Rate updating");
+                _timerManager.StopTimer("Timer1");
+                _logger.Debug("Timer is stopped because rates is updating");
+
+                var currencies = new List<string> { "USD", "EUR", "RUB" };
+                string? updateRate = null;
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                foreach (string rate in currencies)
+                {
+                    if (!_messageInProcess && _timerManager.Timer.Enabled is false)
+                    {
+                        _messageInProcess = true;
+
+                        _logger.Trace($"Rate for update - {rate}");
+                        updateRate = _exchangeRateLoder.EqualityCurrencyExchangeRate(rate, cancellationToken);
+
+                        await Task.Delay(10000, cancellationToken);
+
+                        if (updateRate != null)
+                        {
+                            HandleUpdateRatesAsync(_botClient, _botMessage, updateRate);
+                        }
+                        _logger.Trace("Rate has not been updated");
+                        _messageInProcess = false;
+                    }
+                }
+                _timerManager.StartTimer("Timer1");
+                _logger.Trace("Timer is started after updating \r\n");
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.Error($"The operation was canceled in OnTimedEvent");
             }
         }
 
@@ -173,8 +242,7 @@ namespace JarvisBot
             _logger.Info($"Rate is updating - {rateMessage}");
             _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
         }
-
-
+       
         public async Task HandleWeatherAsync(ITelegramBotClient botClient, Message message)
         {
             if (message.Text == "Погода")
@@ -188,7 +256,7 @@ namespace JarvisBot
         {
             if (message.Text.Contains("Help", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?", 
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?",
                     replyMarkup: _keyboardButtons.GetHelpSubmenuButtons());
             }
         }
@@ -197,7 +265,7 @@ namespace JarvisBot
         {
             if (message.Text == "Device" && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы в меню управления программой - [AnyDesk]", 
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы в меню управления программой - [AnyDesk]",
                     replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
 
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что сделать с программой, Сэр?",
@@ -303,12 +371,12 @@ namespace JarvisBot
         {
             if (message.Text == "Something" && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управления компьютером:", 
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управления компьютером:",
                     replyMarkup: _keyboardButtons.GetRebootButtons());
 
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Еще не поздно вернуться назад, Сэр.",
                     replyMarkup: _keyboardButtons.GetBackButtons());
-            }            
+            }
         }
 
         public async Task HandleRebootPCAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery)
@@ -316,7 +384,7 @@ namespace JarvisBot
             var chatId = _botMessage.Chat?.Id ?? 552523783;
 
             if (callbackQuery.Data == "PC_Reboot")
-            {                
+            {
                 _botMessage = await botClient.SendTextMessageAsync(chatId, "Ждите компьютер ПЕРЕЗАГРУЖАЕТСЯ...");
                 RebootPcClick(botClient, _botMessage);
             }
@@ -334,7 +402,7 @@ namespace JarvisBot
 
             string rebootPC = "shutdown";
             string arguments = "/r /t 1";
-            Process.Start(rebootPC, arguments);            
+            Process.Start(rebootPC, arguments);
         }
 
         public async void PowerOffPcClick(ITelegramBotClient botClient, Message message)
@@ -349,7 +417,7 @@ namespace JarvisBot
 
         public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)
         {
-            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Я отправлю эту информацию в архив, Сэр !");            
+            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Я отправлю эту информацию в архив, Сэр !");
         }
     }
 }
