@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
@@ -20,7 +21,7 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
         private bool _rateIsUpdate = false;
 
 
-        public string RatesResponse(string message)
+        public string RatesResponse(string message, CancellationToken cancellationToken)
         {
             List<ExchRateRecord> rateRecords = new List<ExchRateRecord>();
             string? rateResponse = null;
@@ -62,13 +63,17 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             }
             catch (WebException ex)
             {
-                Console.WriteLine($"Возникло исключение: {ex.Message}");
-                throw;
+                Console.WriteLine($"Возникло WebException: {ex.Message}");
+                _logger.Error($"Возникло WebException: {ex}");
+                return ex.ToString();
+                //throw;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Возникло исключение: {ex.Message}");
-                throw;
+                Console.WriteLine($"Возникло Exception: {ex.Message}");
+                _logger.Error($"Возникло Exception: {ex}");
+                return ex.ToString();
+                //throw;
             }
         }
 
@@ -380,15 +385,17 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             return rateAfterCheck;
         }
 
-        public string EqualityCurrencyExchangeRate(string rate)
+        public string EqualityCurrencyExchangeRate(string rate, CancellationToken cancellationToken)
         {
             string? newRate = null;
-
-            var updateRate = RatesResponse(rate);
-            if (_rateIsUpdate)
+            if (!cancellationToken.IsCancellationRequested)
             {
-                newRate = updateRate;
-                _rateIsUpdate = false;
+                var updateRate = RatesResponse(rate, cancellationToken);
+                if (_rateIsUpdate)
+                {
+                    newRate = updateRate;
+                    _rateIsUpdate = false;
+                }
             }
             return newRate;
         }
