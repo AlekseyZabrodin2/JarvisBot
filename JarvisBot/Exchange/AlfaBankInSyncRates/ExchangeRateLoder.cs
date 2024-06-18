@@ -44,17 +44,17 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 string dateInput = apiResponse.Filial.Rates.ExchRate.Time;
                 var parsedDate = DateTime.Parse(dateInput);
 
-                if (message == "USD")
+                if (message == "💵 USD")
                 {
                     rateResponse = GetUsdRates(rateRecords, parsedDate);
                 }
 
-                if (message == "EUR")
+                if (message == "💶 EUR")
                 {
                     rateResponse = GetEurRates(rateRecords, parsedDate);
                 }
 
-                if (message == "RUB")
+                if (message == "💷 RUB")
                 {
                     rateResponse = GetRubRates(rateRecords, parsedDate);
                 }
@@ -121,7 +121,7 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
             $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
             $"\r\n-----------------------------------------------------" +
-            $"\r\n  1 Доллар США ({rateRecords[0].Mnem})" +
+            $"\r\n  1 Доллар США ({rateRecords[0].Mnem}) - 💵" +
             $"\r\n  покупка     -    {rateUsdBuy}" +
             $"\r\n  продажа    -    {rateUsdSell}";
             return rateResponse;
@@ -212,7 +212,7 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
             $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
             $"\r\n-----------------------------------------------------" +
-            $"\r\n  1 Евро ({rateRecords[1].Mnem})" +
+            $"\r\n  1 Евро ({rateRecords[1].Mnem}) - 💶" +
             $"\r\n  покупка     -    {rateEurBuy}" +
             $"\r\n  продажа    -    {rateEurSell}";
             return rateResponse;
@@ -303,7 +303,7 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             rateResponse = $"Курс InSync на дату - {parsedDate.ToString("dd/MM/yyyy")}" +
             $"\r\n                        на - {parsedDate.ToString("HH/mm")}" +
             $"\r\n-----------------------------------------------------" +
-            $"\r\n  100 Российских рублей ({rateRecords[2].Mnem})" +
+            $"\r\n  100 Российских рублей ({rateRecords[2].Mnem}) - 💷" +
             $"\r\n  покупка     -    {rateRubBuy}" +
             $"\r\n  продажа    -    {rateRubSell}";
             return rateResponse;

@@ -88,9 +88,9 @@ namespace JarvisBot
 
         public async Task HandleBackToMenuAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "< Back")
+            if (message.Text == "⬅️ Back")
             {
-                if (message.Text == "< Back" && message.Chat.Id == _adminChatId)
+                if (message.Text == "⬅️ Back" && message.Chat.Id == _adminChatId)
                 {
                     _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ",
                         replyMarkup: _keyboardButtons.GetAdminMenuButtons());
@@ -137,7 +137,7 @@ namespace JarvisBot
             {
                 _cancellationToken = new();
 
-                if (message.Text == "USD" || message.Text == "EUR" || message.Text == "RUB")
+                if (message.Text == "💵 USD" || message.Text == "💶 EUR" || message.Text == "💷 RUB")
                 {
                     _cancellationToken.Cancel();
 
@@ -204,7 +204,7 @@ namespace JarvisBot
                 _timerManager.StopTimer("Timer1");
                 _logger.Debug("Timer is stopped because rates is updating");
 
-                var currencies = new List<string> { "USD", "EUR", "RUB" };
+                var currencies = new List<string> { "💵 USD", "💶 EUR", "💷 RUB" };
                 string? updateRate = null;
 
                 cancellationToken.ThrowIfCancellationRequested();
@@ -245,7 +245,7 @@ namespace JarvisBot
        
         public async Task HandleWeatherAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "Погода")
+            if (message.Text == "☂️ Погода")
             {
                 var weatuerMessage = WeatherLoder.WeatherResponse();
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
@@ -254,7 +254,7 @@ namespace JarvisBot
 
         public async Task HandleHelpButtonAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text.Contains("Help", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
+            if (message.Text.Contains("🙋‍♂️ Help", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?",
                     replyMarkup: _keyboardButtons.GetHelpSubmenuButtons());
@@ -263,7 +263,7 @@ namespace JarvisBot
 
         public async Task HandleDeviceButtonAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "Device" && message.Chat.Id == _adminChatId)
+            if (message.Text == "💻 Device" && message.Chat.Id == _adminChatId)
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы в меню управления программой - [AnyDesk]",
                     replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
@@ -369,7 +369,7 @@ namespace JarvisBot
 
         public async Task HandleRebootButtonAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "Something" && message.Chat.Id == _adminChatId)
+            if (message.Text == "🛠️ Something" && message.Chat.Id == _adminChatId)
             {
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управления компьютером:",
                     replyMarkup: _keyboardButtons.GetRebootButtons());

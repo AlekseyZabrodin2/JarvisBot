@@ -10,7 +10,7 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] { "Погода", "Курсы валют"}
+                    new KeyboardButton[] { "☂️ Погода", "💰 Курсы валют" }
                 })
             {
                 ResizeKeyboard = true
@@ -22,8 +22,8 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] { "Погода", "Курсы валют"},
-                    new KeyboardButton[] {"Help"}
+                    new KeyboardButton[] { "☂️ Погода", "💰 Курсы валют" },
+                    new KeyboardButton[] { "🙋‍♂️ Help" }
                 })
             {
                 ResizeKeyboard = true
@@ -35,7 +35,7 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] {"Help"}
+                    new KeyboardButton[] { "🙋‍♂️ Help" }
                 })
             {
                 ResizeKeyboard = true
@@ -47,7 +47,7 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] {"< Back"}
+                    new KeyboardButton[] { "⬅️ Back" }
                 })
             {
                 ResizeKeyboard = true
@@ -59,8 +59,8 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] {"USD", "RUB"},
-                    new KeyboardButton[] {"EUR", "< Back"},
+                    new KeyboardButton[] { "💵 USD", "💷 RUB"},
+                    new KeyboardButton[] { "💶 EUR", "⬅️ Back"},
                 })
             {
                 ResizeKeyboard = true
@@ -72,8 +72,8 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] {"Device", "Something"},
-                    new KeyboardButton[] {"< Back"}
+                    new KeyboardButton[] { "💻 Device", "🛠️ Something"},
+                    new KeyboardButton[] { "⬅️ Back" }
                 })
             {
                 ResizeKeyboard = true
@@ -87,8 +87,8 @@ namespace JarvisBot.KeyboardButtons
             {
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData(text: "Start AnyDesk", callbackData: "Start_AnyDesk"),
-                    InlineKeyboardButton.WithCallbackData(text: "Cancel AnyDesk", callbackData: "Cancel_AnyDesk"),
+                    InlineKeyboardButton.WithCallbackData(text: "🚀 Start AnyDesk", callbackData: "Start_AnyDesk"),
+                    InlineKeyboardButton.WithCallbackData(text: "🛑 Cancel AnyDesk", callbackData: "Cancel_AnyDesk"),
                 }
             });
 
@@ -101,8 +101,8 @@ namespace JarvisBot.KeyboardButtons
             {
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData(text: "Reboot", callbackData: "PC_Reboot"),
-                    InlineKeyboardButton.WithCallbackData(text: "Power OFF", callbackData: "PC_PowerOFF"),
+                    InlineKeyboardButton.WithCallbackData(text: "🔄 Reboot", callbackData: "PC_Reboot"),
+                    InlineKeyboardButton.WithCallbackData(text: "⛔️Power OFF", callbackData: "PC_PowerOFF"),
                 }
             });
 
