@@ -65,14 +65,16 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             {
                 Console.WriteLine($"Возникло WebException: {ex.Message}");
                 _logger.Error($"Возникло WebException: {ex}");
-                return ex.ToString();
+                //return ex.ToString();
+                return "Возникло исключение при попытке загрузить курс валют";
                 //throw;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Возникло Exception: {ex.Message}");
                 _logger.Error($"Возникло Exception: {ex}");
-                return ex.ToString();
+                //return ex.ToString();
+                return "Возникло исключение при попытке загрузить курс валют";
                 //throw;
             }
         }
