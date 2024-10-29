@@ -37,6 +37,8 @@ namespace JarvisBot
             await HandleMenuAsync(botClient, message);
             await HandleCurrencyAsync(botClient, message);
             await HandleRatesAsync(botClient, message);
+            await HandleAutoRatesAsync(botClient,message);
+            await HandleStartStopAutoRatesAsync(botClient, message);
             await HandleWeatherAsync(botClient, message);
             await HandleBackToMenuAsync(botClient, message);
 
@@ -146,9 +148,50 @@ namespace JarvisBot
                     _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
                     _messageInProcess = false;
                     _cancellationToken = new();
+                }
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.Error($"The operation was canceled in HandleRatesAsync - [{ex}]");
+            }
+        }
 
-                    _logger.Info("SetTimer for update rate");
+        public async Task HandleAutoRatesAsync(ITelegramBotClient botClient, Message message)
+        {
+            try
+            {
+                _cancellationToken = new();
+
+                if (message.Text == "Auto 🔄️")
+                {
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Авто обновление курса валют ...",
+                        replyMarkup: _keyboardButtons.GetAutoRateButtons());
+                }
+            }
+            catch (OperationCanceledException ex)
+            {
+                _logger.Error($"The operation was canceled in HandleRatesAsync - [{ex}]");
+            }
+        }
+
+        public async Task HandleStartStopAutoRatesAsync(ITelegramBotClient botClient, Message message)
+        {
+            try
+            {
+                _cancellationToken = new();
+
+                if (message.Text == "Auto 💵 💷 💶")
+                {
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Обновление Курса валют ВКЛЮЧЕНО",
+                        replyMarkup: _keyboardButtons.GetAdminMenuButtons());
+
                     SetTimer(_cancellationToken.Token);
+                }
+                else if (message.Text == "Stop 🔄️")
+                {
+                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Авто обновление ВЫКЛЮЧЕНО",
+                        replyMarkup: _keyboardButtons.GetMoneyButtons());
+                    _cancellationToken.Cancel();
                 }
             }
             catch (OperationCanceledException ex)
@@ -211,6 +254,8 @@ namespace JarvisBot
 
                 foreach (string rate in currencies)
                 {
+                    _logger.Trace($"In Rate updating");
+
                     if (!_messageInProcess && _timerManager.Timer.Enabled is false)
                     {
                         _messageInProcess = true;
