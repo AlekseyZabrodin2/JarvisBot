@@ -59,8 +59,22 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] { "💵 USD", "💷 RUB"},
-                    new KeyboardButton[] { "💶 EUR", "⬅️ Back"},
+                    new KeyboardButton[] { "💵 USD", "💷 RUB" },
+                    new KeyboardButton[] { "💶 EUR", "Auto 🔄️" },
+                    new KeyboardButton[] {  "⬅️ Back" },
+                })
+            {
+                ResizeKeyboard = true
+            };
+            return replyKeyboard;
+        }
+
+        public IReplyMarkup GetAutoRateButtons()
+        {
+            ReplyKeyboardMarkup replyKeyboard = new(new[]
+                {
+                    new KeyboardButton[] { "Auto 💵 💷 💶", "Stop 🔄️" },
+                    new KeyboardButton[] {  "⬅️ Back" },
                 })
             {
                 ResizeKeyboard = true
@@ -72,7 +86,7 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] { "💻 Device", "🛠️ Something"},
+                    new KeyboardButton[] { "💻 Device", "🛠️ Something" },
                     new KeyboardButton[] { "⬅️ Back" }
                 })
             {
