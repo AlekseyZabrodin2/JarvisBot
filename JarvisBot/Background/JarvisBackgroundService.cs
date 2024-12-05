@@ -3,6 +3,9 @@ using JarvisBot.KeyboardButtons;
 using Microsoft.Extensions.Hosting;
 using NLog;
 using System;
+using System.Net.Http;
+using System.Net.Sockets;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
@@ -21,6 +24,8 @@ namespace JarvisBot.Background
 
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static CommunicationMethods _communicationMethods = new();
+        private bool _connectionLost = false;
+        private bool _secondRequestException = false;
 
         private ILogger _logger = LogManager.GetCurrentClassLogger();
 
@@ -62,6 +67,12 @@ namespace JarvisBot.Background
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            if (_connectionLost)
+            {
+                _logger.Info("Connection restored!");
+                _connectionLost = false;
+            }
+
             var message = update.Message;
             var callbackQuery = update.CallbackQuery;
 
@@ -83,14 +94,52 @@ namespace JarvisBot.Background
 
         private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
-            var ErrorMessage = exception switch
+            var errorMessage = exception switch
             {
-                ApiRequestException apiRequestException
-                    => $"Telegram API Error:\n[{apiRequestException.ErrorCode}]\n{apiRequestException.Message}",
+                ApiRequestException apiRequestException when apiRequestException.ErrorCode == 429 =>
+                    $"Rate limit exceeded. Retry after {apiRequestException.Parameters?.RetryAfter ?? 0} seconds.",
+                ApiRequestException apiRequestException when apiRequestException.ErrorCode == 401 =>
+                    "Unauthorized: Invalid Bot Token or Bot blocked.",
+                ApiRequestException apiRequestException =>
+                    $"Telegram API Error {apiRequestException.ErrorCode}: {apiRequestException.Message}",
+                HttpRequestException httpRequestException =>
+                    $"Network error: {httpRequestException.Message}",
+                SocketException socketException =>
+                    $"Socket error: {socketException.Message}",
+                TaskCanceledException =>
+                    "Request timed out.",
+                JsonException jsonException =>
+                    $"JSON deserialization error: {jsonException.Message}",
+                RequestException requestException =>
+                    $"Request exception: {requestException.Message}",
+                Exception ex =>
+                    $"Unexpected error: {ex.GetType().Name} - {ex.Message}",
+
                 _ => exception.ToString()
             };
-            _logger.Error($"Error in HandlePollingErrorAsync - {ErrorMessage}");
-            Console.WriteLine(ErrorMessage);
+            if (!_connectionLost)
+            {
+                _logger.Error($"Error in HandlePollingErrorAsync - {errorMessage}");
+                Console.WriteLine(errorMessage);
+                if (exception is RequestException)
+                {
+                    if (_secondRequestException)
+                    {
+                        _connectionLost = true;
+                        _secondRequestException = false;
+                    }
+                    _secondRequestException = true;
+                }
+            }  
+            if (!(exception is RequestException))
+            {
+                if (_connectionLost)
+                {
+                    _connectionLost = false;
+                    _logger.Error($"Error in HandlePollingErrorAsync, but not RequestException - {errorMessage}");
+                }
+            }
+
             return Task.CompletedTask;
         }
 
