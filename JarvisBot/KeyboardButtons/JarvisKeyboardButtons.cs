@@ -115,8 +115,9 @@ namespace JarvisBot.KeyboardButtons
             {
                 new []
                 {
-                    InlineKeyboardButton.WithCallbackData(text: "🔄 Reboot", callbackData: "PC_Reboot"),
-                    InlineKeyboardButton.WithCallbackData(text: "⛔️Power OFF", callbackData: "PC_PowerOFF"),
+                    InlineKeyboardButton.WithCallbackData(text: "🔐 Lock PC", callbackData: "PC_Lock"),
+                    InlineKeyboardButton.WithCallbackData(text: "♻️ Reboot", callbackData: "PC_Reboot"),
+                    InlineKeyboardButton.WithCallbackData(text: "💡 Power OFF", callbackData: "PC_PowerOFF")
                 }
             });
 

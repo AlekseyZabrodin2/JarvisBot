@@ -438,6 +438,11 @@ namespace JarvisBot
                 _botMessage = await botClient.SendTextMessageAsync(chatId, "ВЫКЛЮЧЕНИЕ компьютера...");
                 PowerOffPcClick(botClient, _botMessage);
             }
+            else if (callbackQuery.Data == "PC_Lock")
+            {
+                _botMessage = await botClient.SendTextMessageAsync(chatId, "Выключение экрана ...");
+                LockPcClick(botClient, _botMessage);
+            }
         }
 
         public async void RebootPcClick(ITelegramBotClient botClient, Message message)
@@ -458,6 +463,16 @@ namespace JarvisBot
             string powerOffPC = "shutdown";
             string arguments = "/s /f /t 0";
             Process.Start(powerOffPC, arguments);
+        }
+
+        public async void LockPcClick(ITelegramBotClient botClient, Message message)
+        {
+            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Экран выключен, сер");
+            Console.WriteLine("Экран выключен, сер");
+
+            string lockPC = "Rundll32.exe";
+            string arguments = "user32.dll,LockWorkStation";
+            Process.Start(lockPC, arguments);
         }
 
         public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)
