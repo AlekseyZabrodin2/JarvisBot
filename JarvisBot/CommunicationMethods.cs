@@ -1,9 +1,9 @@
-﻿using JarvisBot.Data;
+﻿using JarvisBot.Background;
 using JarvisBot.Exchange.AlfaBankInSyncRates;
 using JarvisBot.KeyboardButtons;
 using JarvisBot.Weather;
+using Microsoft.Extensions.Options;
 using NLog;
-using NLog.Fluent;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,16 +18,28 @@ namespace JarvisBot
 {
     public class CommunicationMethods
     {
-        private static readonly ChatId _adminChatId = new(TelegramBotConfiguration.LoadChatIdConfiguration());
+        private readonly JarvisClientSettings _clientSettings;
+        private readonly ChatId _adminChatId;
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
         private static JarvisKeyboardButtons _keyboardButtons = new();
         private static Message _botMessage = new();
         private ITelegramBotClient _botClient;
-        private static ExchangeRateLoder _exchangeRateLoder = new();
+        private static ExchangeRateLoder _exchangeRateLoder;
+        private static WeatherLoder _weatherLoder;
         private Process? _anyDeskProcess;
         private CancellationTokenSource _cancellationToken;
         private TimerManager _timerManager = new();
         private bool _messageInProcess;
+
+
+        public CommunicationMethods(IOptions<JarvisClientSettings> options, ExchangeRateLoder exchangeRateLoder, WeatherLoder weatherLoder)
+        {
+            _clientSettings = options.Value;
+            _exchangeRateLoder = exchangeRateLoder;
+            _weatherLoder = weatherLoder;
+
+            _adminChatId = new(_clientSettings.AdminChatId);
+        }
 
 
         public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername, CancellationToken cancellationToken)
@@ -292,7 +304,7 @@ namespace JarvisBot
         {
             if (message.Text == "☂️ Погода")
             {
-                var weatuerMessage = WeatherLoder.WeatherResponse();
+                var weatuerMessage = _weatherLoder.WeatherResponse();
                 _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
             }
         }

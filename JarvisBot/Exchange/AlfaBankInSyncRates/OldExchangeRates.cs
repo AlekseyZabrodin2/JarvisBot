@@ -1,13 +1,9 @@
-﻿using JarvisBot.Data;
-using JarvisBot.Weather;
+﻿using JarvisBot.Background;
+using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace JarvisBot.Exchange.AlfaBankInSyncRates
 {
@@ -32,16 +28,28 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
         [JsonPropertyName("old_Rub_Rate_Sell")]
         public double OldRubRateSell { get; set; }
 
+        private readonly JarvisClientSettings _clientSettings;
+
+        public OldExchangeRates()
+        {
+            
+        }
+
+        public OldExchangeRates(IOptions<JarvisClientSettings> options)
+        {
+            _clientSettings = options.Value;
+        }
+
 
         public void ReadJsonFile()
         {
 
-            if (!File.Exists(TelegramBotConfiguration.OldExchangeRatesPath))
+            if (!File.Exists(_clientSettings.OldExchangeRatesPath))
             {
-                File.WriteAllText(TelegramBotConfiguration.OldExchangeRatesPath, "{}");
+                File.WriteAllText(_clientSettings.OldExchangeRatesPath, "{}");
             }
 
-            string jsonContent = File.ReadAllText(TelegramBotConfiguration.OldExchangeRatesPath);
+            string jsonContent = File.ReadAllText(_clientSettings.OldExchangeRatesPath);
             var loadeRate = JsonSerializer.Deserialize<OldExchangeRates>(jsonContent);
             if (loadeRate != null)
             {
@@ -61,10 +69,8 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
         public void WriteJsonFile()
         {
             string jsonString = JsonSerializer.Serialize(this);
-            File.WriteAllText(TelegramBotConfiguration.OldExchangeRatesPath, jsonString);
+            File.WriteAllText(_clientSettings.OldExchangeRatesPath, jsonString);
         }
-
-        
 
     }
 }

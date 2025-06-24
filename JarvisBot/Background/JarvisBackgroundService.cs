@@ -1,6 +1,6 @@
-﻿using JarvisBot.Data;
-using JarvisBot.KeyboardButtons;
+﻿using JarvisBot.KeyboardButtons;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using NLog;
 using System;
 using System.Net.Http;
@@ -18,17 +18,26 @@ namespace JarvisBot.Background
     class JarvisBackgroundService : BackgroundService
     {
 
-        TelegramBotClient _botClient = new($"{TelegramBotConfiguration.LoadBotClientConfiguration()}");
-        private static readonly ChatId _adminChatId = new(TelegramBotConfiguration.LoadChatIdConfiguration());
+        TelegramBotClient _botClient;
+        private readonly ChatId _adminChatId;
         private User _botClientUsername = new();
-
+        private readonly JarvisClientSettings _clientSettings;
         private static JarvisKeyboardButtons _keyboardButtons = new();
-        private static CommunicationMethods _communicationMethods = new();
+        private static CommunicationMethods _communicationMethods;
         private bool _connectionLost = false;
         private bool _secondRequestException = false;
 
         private ILogger _logger = LogManager.GetCurrentClassLogger();
 
+
+        public JarvisBackgroundService(IOptions<JarvisClientSettings> options, CommunicationMethods communicationMethods)
+        {
+            _clientSettings = options.Value;
+            _communicationMethods = communicationMethods;
+
+            _botClient = new($"{_clientSettings.TelegramBotClient}");
+            _adminChatId = new(_clientSettings.AdminChatId);
+        }
 
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)

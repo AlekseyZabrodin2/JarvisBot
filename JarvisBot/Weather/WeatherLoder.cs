@@ -1,4 +1,5 @@
-﻿using JarvisBot.Data;
+﻿using JarvisBot.Background;
+using Microsoft.Extensions.Options;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -9,8 +10,16 @@ namespace JarvisBot.Weather
 {
     public class WeatherLoder
     {
+        private readonly JarvisClientSettings _clientSettings;
 
-        public static async Task<string> WeatherResponse()
+
+        public WeatherLoder(IOptions<JarvisClientSettings> options)
+        {
+            _clientSettings = options.Value;
+        }
+
+
+        public async Task<string> WeatherResponse()
         {
             string weatherResponse = null;
             string factWeather = null;
@@ -39,7 +48,7 @@ namespace JarvisBot.Weather
             }
         }
 
-        private static string FactWeatherPartTwo(WeatherBaseModel apiResponse)
+        private string FactWeatherPartTwo(WeatherBaseModel apiResponse)
         {
             var forecastWeather = $"   Минск  " +
                                 $"\r\n {apiResponse.Fact.Temp}°C" +
@@ -50,7 +59,7 @@ namespace JarvisBot.Weather
             return forecastWeather;
         }
 
-        private static string WeatherForecastPartTwo(WeatherBaseModel apiResponse, WeatherPart forecastPartsArea)
+        private string WeatherForecastPartTwo(WeatherBaseModel apiResponse, WeatherPart forecastPartsArea)
         {
             var forecastWeather = $" {DisplayWeatherInfo.DisplayFactInformation(forecastPartsArea.PartName)} " +
                                 $"\r\n {forecastPartsArea.TempMin}°C ... {forecastPartsArea.TempMax}°C" +
@@ -61,7 +70,7 @@ namespace JarvisBot.Weather
             return forecastWeather;
         }
 
-        private static string DisplayWeather(string factWeather, string forecastPartOne, string forecastPartTwo)
+        private string DisplayWeather(string factWeather, string forecastPartOne, string forecastPartTwo)
         {
             var displayWeather = factWeather +
                                 $"\r\n-----------------------------------------------------" +
@@ -72,13 +81,13 @@ namespace JarvisBot.Weather
             return displayWeather;
         }
 
-        public static async Task<WeatherBaseModel> LoadWeather()
+        public async Task<WeatherBaseModel> LoadWeather()
         {
             string responseData;
             WeatherBaseModel weatherBaseModel = new();
 
-            string apiKey = TelegramBotConfiguration.LoadYandexApiKeyConfiguration();
-            string apiUrl = TelegramBotConfiguration.LoadYandexWeatherConfiguration();
+            string apiKey = _clientSettings.YandexKey;
+            string apiUrl = _clientSettings.YandexWeather;
 
             using (HttpClient httpClient = new HttpClient())
             {
