@@ -1,0 +1,10 @@
+﻿{
+  "JarvisClientSettings": {
+    "TelegramBotClient": "TelegramBotClient_dev",
+    "AdminChatId": 0,
+    "YandexKey": "YandexKey_dev",
+    "AlfabankRate": "AlfabankRate_dev",
+    "YandexWeather": "YandexWeather_dev",
+    "OldExchangeRatesPath": "OldExchangeRatesPath_dev"
+  }
+}
