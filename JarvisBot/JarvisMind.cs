@@ -1,8 +1,12 @@
 ﻿using JarvisBot.Background;
+using JarvisBot.Exchange.AlfaBankInSyncRates;
+using JarvisBot.Weather;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NLog;
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,6 +16,8 @@ namespace JarvisBot
     {
 
         private static ILogger _logger = LogManager.GetCurrentClassLogger();
+
+        public JarvisClientSettings JarvisClientSettings { get; set; }
 
 
         private static async Task Main(string[] args)
@@ -30,9 +36,33 @@ namespace JarvisBot
                 }
                 var host = Host
                 .CreateDefaultBuilder(args)
+                .ConfigureAppConfiguration((context, config) =>
+                {
+                    var env = context.HostingEnvironment;
+
+                    config.AddJsonFile(Path.Combine(AppContext.BaseDirectory, "AppSettings/jarvisClientSettings.json"));
+
+                    // add UserSecrets when Development
+                    //if (env.IsDevelopment())
+                    //{
+                        config.AddUserSecrets<JarvisMind>();
+                    //}
+
+                    config.AddEnvironmentVariables();
+                })
                 .ConfigureServices((context, services) =>
                 {
+                    var configuration = context.Configuration;
+
+                    services.AddSingleton<CommunicationMethods>();
+                    services.AddSingleton<JarvisBackgroundService>();
+                    services.AddSingleton<ExchangeRateLoder>();
+                    services.AddSingleton<OldExchangeRates>();
+                    services.AddSingleton<WeatherLoder>();
+
                     services.AddHostedService<JarvisBackgroundService>();
+
+                    services.Configure<JarvisClientSettings>(configuration.GetSection(nameof(JarvisClientSettings)));
                 })
                 .UseWindowsService()
                 .Build();
