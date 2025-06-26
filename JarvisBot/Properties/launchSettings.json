@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "JarvisBot (Development/Unpackaged)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "JarvisBot (Production/Unpackaged)": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Production"
+      }
+    }
+  }
+}
