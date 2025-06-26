@@ -2,7 +2,6 @@
 using JarvisBot.Exchange.AlfaBankInSyncRates;
 using JarvisBot.KeyboardButtons;
 using JarvisBot.Weather;
-using Microsoft.Extensions.Options;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -32,9 +31,9 @@ namespace JarvisBot
         private bool _messageInProcess;
 
 
-        public CommunicationMethods(IOptions<JarvisClientSettings> options, ExchangeRateLoder exchangeRateLoder, WeatherLoder weatherLoder)
+        public CommunicationMethods(JarvisClientSettings clientSettings, ExchangeRateLoder exchangeRateLoder, WeatherLoder weatherLoder)
         {
-            _clientSettings = options.Value;
+            _clientSettings = clientSettings;
             _exchangeRateLoder = exchangeRateLoder;
             _weatherLoder = weatherLoder;
 
@@ -45,26 +44,38 @@ namespace JarvisBot
         public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername, CancellationToken cancellationToken)
         {
             _botClient = botClient;
-            await HandleGreetingAsync(botClient, message);
-            await HandleMenuAsync(botClient, message);
-            await HandleCurrencyAsync(botClient, message);
-            await HandleRatesAsync(botClient, message);
-            await HandleAutoRatesAsync(botClient,message);
-            await HandleStartStopAutoRatesAsync(botClient, message);
-            await HandleWeatherAsync(botClient, message);
-            await HandleBackToMenuAsync(botClient, message);
-
-            await HandleHelpButtonAsync(botClient, message);
-            await HandleDeviceButtonAsync(botClient, message);
-
-            await HandleRebootButtonAsync(botClient, message);
-
-            if (_botMessage.Text == null || _botMessage.Text == string.Empty)
+            try
             {
-                await HandleUnknownMessageAsync(botClient, message);
-            }
+                await HandleGreetingAsync(botClient, message);
+                await HandleMenuAsync(botClient, message);
+                await HandleCurrencyAsync(botClient, message);
+                await HandleRatesAsync(botClient, message);
+                await HandleAutoRatesAsync(botClient, message);
+                await HandleStartStopAutoRatesAsync(botClient, message);
+                await HandleWeatherAsync(botClient, message);
+                await HandleBackToMenuAsync(botClient, message);
 
-            WriteAnswerInBotConsole(botUsername, _botMessage);
+                await HandleHelpButtonAsync(botClient, message);
+                await HandleDeviceButtonAsync(botClient, message);
+
+                await HandleRebootButtonAsync(botClient, message);
+
+                if (_botMessage.Text == null || _botMessage.Text == string.Empty)
+                {
+                    await HandleUnknownMessageAsync(botClient, message);
+                }
+
+                WriteAnswerInBotConsole(botUsername, _botMessage);
+            }
+            catch (Telegram.Bot.Exceptions.ApiRequestException ex) when (ex.ErrorCode == 403)
+            {
+                _logger.Warn($"Пользователь {_botClient.BotId} заблокировал бота. Удаляю из списка.");
+                // Можно исключить этого пользователя из рассылок
+            }
+            catch (Exception ex)
+            {
+                _logger.Error($"Неизвестная ошибка при отправке сообщения пользователю {_botClient.BotId}: {ex.Message}");
+            }            
         }
 
         public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query, User botUsername)
@@ -140,7 +151,7 @@ namespace JarvisBot
         {
             if (message.Text.Contains("Курсы валют", StringComparison.CurrentCultureIgnoreCase))
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту", 
+                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту",
                     replyMarkup: _keyboardButtons.GetMoneyButtons());
             }
         }
@@ -225,7 +236,7 @@ namespace JarvisBot
             _timerManager.StopTimer("Timer1");
             _logger.Debug("Previously started timers have been stopped");
 
-            
+
             if (_timerManager.Timer == null || !_timerManager.TimerId.Contains("Timer1"))
             {
                 _timerManager.CreateTimer("Timer1", 30);
@@ -235,7 +246,7 @@ namespace JarvisBot
 
             _logger.Trace($"New Timer {_timerManager.TimerId} is started ");
             _timerManager.Timer.Elapsed += OnTimedEvent;
-            
+
             if (_timerManager.Timer.Enabled)
             {
                 _timerManager.StopTimer("Timer1");
@@ -299,7 +310,7 @@ namespace JarvisBot
             _logger.Info($"Rate is updating - {rateMessage}");
             _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
         }
-       
+
         public async Task HandleWeatherAsync(ITelegramBotClient botClient, Message message)
         {
             if (message.Text == "☂️ Погода")

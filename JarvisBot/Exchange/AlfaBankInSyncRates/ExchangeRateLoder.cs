@@ -1,5 +1,4 @@
 ﻿using JarvisBot.Background;
-using Microsoft.Extensions.Options;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -7,11 +6,8 @@ using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
-using Telegram.Bot.Types;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace JarvisBot.Exchange.AlfaBankInSyncRates
 {
@@ -22,10 +18,9 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
         private bool _rateIsUpdate = false;
 
-        public ExchangeRateLoder(IOptions<JarvisClientSettings> options, OldExchangeRates oldExchangeRates)
+        public ExchangeRateLoder(JarvisClientSettings clientSettings, OldExchangeRates oldExchangeRates)
         {
-            _clientSettings = options.Value;
-
+            _clientSettings = clientSettings;
             _oldExchangeRates = oldExchangeRates;
         }
 

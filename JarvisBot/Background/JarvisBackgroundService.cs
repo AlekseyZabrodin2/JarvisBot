@@ -1,6 +1,5 @@
 ﻿using JarvisBot.KeyboardButtons;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using NLog;
 using System;
 using System.Net.Http;
@@ -30,9 +29,9 @@ namespace JarvisBot.Background
         private ILogger _logger = LogManager.GetCurrentClassLogger();
 
 
-        public JarvisBackgroundService(IOptions<JarvisClientSettings> options, CommunicationMethods communicationMethods)
+        public JarvisBackgroundService(JarvisClientSettings clientSettings, CommunicationMethods communicationMethods)
         {
-            _clientSettings = options.Value;
+            _clientSettings = clientSettings;
             _communicationMethods = communicationMethods;
 
             _botClient = new($"{_clientSettings.TelegramBotClient}");
@@ -91,7 +90,7 @@ namespace JarvisBot.Background
                 return;
             }
 
-            if (message.Text == null)
+            if (message?.Text == null)
             {
                 return;
             }

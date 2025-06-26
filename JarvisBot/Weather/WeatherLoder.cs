@@ -1,5 +1,4 @@
 ﻿using JarvisBot.Background;
-using Microsoft.Extensions.Options;
 using System;
 using System.Net;
 using System.Net.Http;
@@ -13,18 +12,18 @@ namespace JarvisBot.Weather
         private readonly JarvisClientSettings _clientSettings;
 
 
-        public WeatherLoder(IOptions<JarvisClientSettings> options)
+        public WeatherLoder(JarvisClientSettings clientSettings)
         {
-            _clientSettings = options.Value;
+            _clientSettings = clientSettings;
         }
 
 
         public async Task<string> WeatherResponse()
         {
-            string weatherResponse = null;
-            string factWeather = null;
-            string forecastPartOne = null;
-            string forecastPartTwo = null;
+            string weatherResponse = string.Empty;
+            string factWeather = string.Empty;
+            string forecastPartOne = string.Empty;
+            string forecastPartTwo = string.Empty;
 
             try
             {

@@ -1,19 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace JarvisBot.Background
+﻿namespace JarvisBot.Background
 {
     public class JarvisClientSettings
     {
-        public string? TelegramBotClient { get; set; }
+        public string TelegramBotClient { get; set; } = string.Empty;
+        public string AdminChatIdString { get; set; } = string.Empty;
         public int AdminChatId { get; set; }
-        public string? YandexKey { get; set; }
-        public string? AlfabankRate { get; set; }
-        public string? YandexWeather { get; set; }
+        public string YandexKey { get; set; } = string.Empty;
+        public string AlfabankRate { get; set; } = string.Empty;
+        public string YandexWeather { get; set; } = string.Empty;
 
-        public string? OldExchangeRatesPath { get; set; }
+        public string OldExchangeRatesPath { get; set; } = string.Empty;
     }
 }

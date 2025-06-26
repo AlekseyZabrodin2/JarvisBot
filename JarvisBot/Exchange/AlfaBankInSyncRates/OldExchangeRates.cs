@@ -1,5 +1,4 @@
 ﻿using JarvisBot.Background;
-using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -35,9 +34,9 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             
         }
 
-        public OldExchangeRates(IOptions<JarvisClientSettings> options)
+        public OldExchangeRates(JarvisClientSettings clientSettings)
         {
-            _clientSettings = options.Value;
+            _clientSettings = clientSettings;
         }
 
 
