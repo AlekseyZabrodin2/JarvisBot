@@ -42,7 +42,11 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
 
         public void ReadJsonFile()
         {
-
+            var directory = Path.GetDirectoryName(_clientSettings.OldExchangeRatesPath);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {                
+                Directory.CreateDirectory(directory);
+            }
             if (!File.Exists(_clientSettings.OldExchangeRatesPath))
             {
                 File.WriteAllText(_clientSettings.OldExchangeRatesPath, "{}");
