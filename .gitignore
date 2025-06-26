@@ -264,3 +264,11 @@ __pycache__/
 # Ignore for UserSecrets documents
 **/secrets.json
 **/UserSecrets/
+
+# By default, the configuration system will let you override appsettings.json from appsettings.Development.json when the environment is Development.
+# It's best to avoid putting any sensitive information directly in appsettings.json because you will likely want to include that file in source control.
+# You can copy any settings from appsettings.json into appsettings.Development.json instead of putting anything sensitive in appsettings.json.
+# We generally add appsettings.Development.json to the .gitignore file so that any connection strings or credentials won't go into source control.
+# It also supports overriding appsettings.json with appsettings.Production.json if the environment is Production. We don't include an
+# appsettings.Production.json file in the template, and would create that file manually on the production server as part of the first deployment.
+*appsettings.*.json
