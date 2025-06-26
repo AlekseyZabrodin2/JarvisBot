@@ -272,3 +272,7 @@ __pycache__/
 # It also supports overriding appsettings.json with appsettings.Production.json if the environment is Production. We don't include an
 # appsettings.Production.json file in the template, and would create that file manually on the production server as part of the first deployment.
 *appsettings.*.json
+
+# Игнорируем папку JarvisFiles — в ней находятся временные файлы,
+# которые не нужно добавлять в репозиторий, чтобы избежать конфликтов и засорения истории коммитов
+[Jj]arvisFiles/
