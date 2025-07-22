@@ -495,7 +495,16 @@ namespace JarvisBot
 
             string lockPC = "Rundll32.exe";
             string arguments = "user32.dll,LockWorkStation";
-            Process.Start(lockPC, arguments);
+            //Process.Start(lockPC, arguments);
+
+            // Создана задача "LockPC" в планировщике заданий для запуска
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "schtasks",
+                Arguments = "/run /tn \"LockPC\"",
+                UseShellExecute = false,
+                CreateNoWindow = true
+            });
         }
 
         public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)
