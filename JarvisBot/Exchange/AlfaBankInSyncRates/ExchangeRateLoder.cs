@@ -5,7 +5,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
 
@@ -25,14 +27,14 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
         }
 
 
-        public string RatesResponse(string message, CancellationToken cancellationToken)
+        public async Task<string> RatesResponse(string message, CancellationToken cancellationToken)
         {
             List<ExchRateRecord> rateRecords = new List<ExchRateRecord>();
             string? rateResponse = null;
 
             try
             {
-                var apiResponse = LoadAlfabankRate();
+                var apiResponse = await LoadAlfabankRateAsync();
                 foreach (var rate in apiResponse.Filial.Rates.ExchRate.ExchRateRecord)
                 {
                     rateRecords.Add(rate);
@@ -81,43 +83,51 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
                 return "Возникло исключение при попытке загрузить курс валют";
                 //throw;
             }
-        }
+        }       
 
-        public Filials LoadAlfabankRate()
+        public async Task<Filials> LoadAlfabankRateAsync()
         {
             string url = _clientSettings.AlfabankRate;
-            string xmlString;
-            Filials filials = new();
-
-            HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-            using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest?.GetResponse())
+            var handler = new HttpClientHandler
             {
-                if (httpWebResponse == null || httpWebResponse.StatusCode != HttpStatusCode.OK)
-                {
-                    Console.WriteLine("Failed to get a valid HTTP response.");
-                    return null;
-                }
+                UseCookies = true,
+                CookieContainer = new CookieContainer(),
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            };
 
-                using (StreamReader streamReader = new StreamReader(httpWebResponse.GetResponseStream()))
-                {
-                    xmlString = streamReader.ReadToEnd();
-                    Console.WriteLine($"Rate response - {xmlString}");
-                    _logger.Info($"Rate response - {xmlString}");
-                }
+            using var client = new HttpClient(handler);
+            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+            client.DefaultRequestHeaders.Add("Accept", "application/xml,text/html,application/xhtml+xml");
+            client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
 
-                XmlSerializer serializer = new XmlSerializer(typeof(Filials));
+            // первый запрос (чтобы сервер отдал cookie)
+            var response1 = await client.GetAsync(url);
+            var html = await response1.Content.ReadAsStringAsync();
 
-                using (XmlReader reader = XmlReader.Create(new StringReader(xmlString)))
-                {
-                    filials = (Filials)serializer.Deserialize(reader);
-
-                    Console.WriteLine($"Example value: {filials.Filial.Name}");
-                }
+            if (html.Contains("hg-security"))
+            {
+                Console.WriteLine("Anti-bot detected. Trying second request...");
+                await Task.Delay(1000); // подождём немного
+                var response2 = await client.GetAsync(url);
+                html = await response2.Content.ReadAsStringAsync();
             }
+
+            if (html.StartsWith("<html", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Still received HTML, access blocked.");
+                _logger.Error("Alfabank rate endpoint returned HTML — bot protection.");
+                return null;
+            }
+
+            // теперь парсим XML
+            var serializer = new XmlSerializer(typeof(Filials));
+            using var stringReader = new StringReader(html);
+            using var reader = XmlReader.Create(stringReader);
+            var filials = (Filials)serializer.Deserialize(reader);
 
             return filials;
         }
-               
+
         private string GetUsdRates(List<ExchRateRecord> rateRecords, DateTime parsedDate)
         {
             string? rateResponse;
@@ -391,12 +401,12 @@ namespace JarvisBot.Exchange.AlfaBankInSyncRates
             return rateAfterCheck;
         }
 
-        public string EqualityCurrencyExchangeRate(string rate, CancellationToken cancellationToken)
+        public async Task<string> EqualityCurrencyExchangeRate(string rate, CancellationToken cancellationToken)
         {
             string? newRate = null;
             if (!cancellationToken.IsCancellationRequested)
             {
-                var updateRate = RatesResponse(rate, cancellationToken);
+                var updateRate = await RatesResponse(rate, cancellationToken);
                 if (_rateIsUpdate)
                 {
                     newRate = updateRate;

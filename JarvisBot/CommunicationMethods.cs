@@ -167,7 +167,7 @@ namespace JarvisBot
                     _cancellationToken.Cancel();
 
                     _messageInProcess = true;
-                    var rateMessage = _exchangeRateLoder.RatesResponse(message.Text, _cancellationToken.Token);
+                    var rateMessage = await _exchangeRateLoder.RatesResponse(message.Text, _cancellationToken.Token);
                     _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
                     _messageInProcess = false;
                     _cancellationToken = new();
@@ -284,7 +284,7 @@ namespace JarvisBot
                         _messageInProcess = true;
 
                         _logger.Trace($"Rate for update - {rate}");
-                        updateRate = _exchangeRateLoder.EqualityCurrencyExchangeRate(rate, cancellationToken);
+                        updateRate = await _exchangeRateLoder.EqualityCurrencyExchangeRate(rate, cancellationToken);
 
                         await Task.Delay(10000, cancellationToken);
 
