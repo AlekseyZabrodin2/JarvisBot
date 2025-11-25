@@ -1,6 +1,7 @@
 ﻿using JarvisBot.Background;
 using JarvisBot.Exchange.AlfaBankInSyncRates;
 using JarvisBot.SecureService;
+using JarvisBot.TasksFromGrpc;
 using JarvisBot.Weather;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,7 @@ namespace JarvisBot
 
         public JarvisClientSettings JarvisClientSettings { get; set; }
         public EncryptionSettings EncryptionSettings { get; set; }
+        public GrpcConnectingSettings GrpcConnectingSettings { get; set; }
 
 
         private static async Task Main(string[] args)
@@ -66,11 +68,13 @@ namespace JarvisBot
 
                     services.Configure<JarvisClientSettings>(configuration.GetSection(nameof(JarvisClientSettings)));
                     services.Configure<EncryptionSettings>(configuration.GetSection(nameof(EncryptionSettings)));
+                    services.Configure<GrpcConnectingSettings>(configuration.GetSection(nameof(GrpcConnectingSettings)));
 
                     var provider = services.BuildServiceProvider();
                     var encryption = provider.GetRequiredService<EncryptionHelper>();
                     var settins = provider.GetRequiredService<IOptions<JarvisClientSettings>>().Value;
                     var encryptionSettings = provider.GetRequiredService<IOptions<EncryptionSettings>>().Value;
+                    var grpcConnectingSettings = provider.GetRequiredService<IOptions<GrpcConnectingSettings>>().Value;
 
                     JarvisClientSettings clientSettings;
                     if (env.IsProduction())
