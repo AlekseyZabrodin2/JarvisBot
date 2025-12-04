@@ -6,24 +6,12 @@ namespace JarvisBot.KeyboardButtons
     {
 
 
-        public IReplyMarkup GetMenuButtons()
-        {
-            ReplyKeyboardMarkup replyKeyboard = new(new[]
-                {
-                    new KeyboardButton[] { "☂️ Погода", "💰 Курсы валют" }
-                })
-            {
-                ResizeKeyboard = true
-            };
-            return replyKeyboard;
-        }
-
-        public IReplyMarkup GetAdminMenuButtons()
+        public ReplyMarkup GetMenuButtons()
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
                     new KeyboardButton[] { "☂️ Погода", "💰 Курсы валют" },
-                    new KeyboardButton[] { "🙋‍♂️ Help" }
+                    new KeyboardButton[] { "📋 Задачи" }
                 })
             {
                 ResizeKeyboard = true
@@ -31,7 +19,33 @@ namespace JarvisBot.KeyboardButtons
             return replyKeyboard;
         }
 
-        public IReplyMarkup GetHelpButtons()
+        public ReplyMarkup GetAdminMenuButtons()
+        {
+            ReplyKeyboardMarkup replyKeyboard = new(new[]
+                {
+                    new KeyboardButton[] { "☂️ Погода", "💰 Курсы валют" },
+                    new KeyboardButton[] { "📋 Задачи", "🙋‍♂️ Help" }
+                })
+            {
+                ResizeKeyboard = true
+            };
+            return replyKeyboard;
+        }
+
+        public ReplyMarkup GetTasksMenuButtons()
+        {
+            ReplyKeyboardMarkup replyKeyboard = new(new[]
+                {
+                    new KeyboardButton[] { "📋 На сегодня", "📅 На неделю" },
+                    new KeyboardButton[] {  "⬅️ Back" }
+                })
+            {
+                ResizeKeyboard = true
+            };
+            return replyKeyboard;
+        }
+
+        public ReplyMarkup GetHelpButtons()
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
@@ -43,7 +57,7 @@ namespace JarvisBot.KeyboardButtons
             return replyKeyboard;
         }
 
-        public IReplyMarkup GetBackButtons()
+        public ReplyMarkup GetBackButtons()
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
@@ -55,7 +69,7 @@ namespace JarvisBot.KeyboardButtons
             return replyKeyboard;
         }
 
-        public IReplyMarkup GetMoneyButtons()
+        public ReplyMarkup GetMoneyButtons()
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
@@ -69,7 +83,7 @@ namespace JarvisBot.KeyboardButtons
             return replyKeyboard;
         }
 
-        public IReplyMarkup GetAutoRateButtons()
+        public ReplyMarkup GetAutoRateButtons()
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
@@ -82,7 +96,7 @@ namespace JarvisBot.KeyboardButtons
             return replyKeyboard;
         }
 
-        public IReplyMarkup GetHelpSubmenuButtons()
+        public ReplyMarkup GetHelpSubmenuButtons()
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
@@ -95,7 +109,7 @@ namespace JarvisBot.KeyboardButtons
             return replyKeyboard;
         }
 
-        public IReplyMarkup GetStartAnyDeskButtons()
+        public ReplyMarkup GetStartAnyDeskButtons()
         {
             InlineKeyboardMarkup inlineKeyboard = new(new[]
             {
@@ -109,7 +123,7 @@ namespace JarvisBot.KeyboardButtons
             return inlineKeyboard;
         }
 
-        public IReplyMarkup GetRebootButtons()
+        public ReplyMarkup GetRebootButtons()
         {
             InlineKeyboardMarkup inlineKeyboard = new(new[]
             {

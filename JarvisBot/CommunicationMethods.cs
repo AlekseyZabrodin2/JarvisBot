@@ -1,7 +1,11 @@
-﻿using JarvisBot.Background;
+﻿using Grpc.Net.Client;
+using JarvisBot.Background;
 using JarvisBot.Exchange.AlfaBankInSyncRates;
 using JarvisBot.KeyboardButtons;
+using JarvisBot.TasksFromGrpc;
 using JarvisBot.Weather;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using NLog;
 using System;
 using System.Collections.Generic;
@@ -12,6 +16,8 @@ using System.Threading.Tasks;
 using System.Timers;
 using Telegram.Bot;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using TelegramBotGrpcService;
 
 namespace JarvisBot
 {
@@ -28,20 +34,45 @@ namespace JarvisBot
         private Process? _anyDeskProcess;
         private CancellationTokenSource _cancellationToken;
         private TimerManager _timerManager = new();
+        private TelegramService.TelegramServiceClient _grpcClient;
+        private GrpcConnectingSettings _grpcConnectingSettings;
         private bool _messageInProcess;
+        IServiceProvider _serviceProvider;
 
 
-        public CommunicationMethods(JarvisClientSettings clientSettings, ExchangeRateLoder exchangeRateLoder, WeatherLoder weatherLoder)
+        public CommunicationMethods(JarvisClientSettings clientSettings, ExchangeRateLoder exchangeRateLoder, 
+            WeatherLoder weatherLoder, IServiceProvider serviceProvider)
         {
             _clientSettings = clientSettings;
             _exchangeRateLoder = exchangeRateLoder;
             _weatherLoder = weatherLoder;
 
             _adminChatId = new(_clientSettings.AdminChatId);
+
+            StartGrpcClient(serviceProvider);
         }
 
 
-        public async Task ProcessingMessage(ITelegramBotClient botClient, Message message, User botUsername, CancellationToken cancellationToken)
+
+        private void StartGrpcClient(IServiceProvider serviceProvider)
+        {
+            _serviceProvider = serviceProvider;
+            var options = _serviceProvider.GetService<IOptions<GrpcConnectingSettings>>();
+            _grpcConnectingSettings = options.Value;
+
+            if (_grpcConnectingSettings != null)
+            {
+                _grpcClient = new TelegramService.TelegramServiceClient(GrpcChannel.ForAddress(_grpcConnectingSettings.GrpcChannel));
+                _logger.Info($"gRPC client started with - [{_grpcConnectingSettings.GrpcChannel}] address");
+            }
+            else
+            {
+                _logger.Error($"gRPC client not started, address is - [{_grpcConnectingSettings.GrpcChannel}]");
+            }
+        }
+
+        public async Task ProcessingMessage(ITelegramBotClient botClient, Message message,
+            User botUsername, CancellationToken cancellationToken)
         {
             _botClient = botClient;
             try
@@ -59,6 +90,10 @@ namespace JarvisBot
                 await HandleDeviceButtonAsync(botClient, message);
 
                 await HandleRebootButtonAsync(botClient, message);
+                await HandleChooseTasksButtonAsync(botClient, message);
+
+                await HandleGetTasksForTodayAsync(botClient, message);
+                await HandleGetTaskForWeekAsync(botClient, message);
 
                 if (_botMessage.Text == null || _botMessage.Text == string.Empty)
                 {
@@ -107,7 +142,7 @@ namespace JarvisBot
         {
             if (message.Text.Contains("Привет", StringComparison.CurrentCultureIgnoreCase))
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Privet");
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "Privet");
             }
         }
 
@@ -117,12 +152,12 @@ namespace JarvisBot
             {
                 if (message.Text == "⬅️ Back" && message.Chat.Id == _adminChatId)
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ",
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, "Вы в МЕНЮ",
                         replyMarkup: _keyboardButtons.GetAdminMenuButtons());
                 }
                 else
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Вы в МЕНЮ",
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, "Вы в МЕНЮ",
                         replyMarkup: _keyboardButtons.GetMenuButtons());
                 }
             }
@@ -136,12 +171,12 @@ namespace JarvisBot
                 if (message.Text.Contains("Меню", StringComparison.CurrentCultureIgnoreCase) ||
                     message.Text.Contains("Menu", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose",
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Choose",
                         replyMarkup: _keyboardButtons.GetAdminMenuButtons());
                 }
                 else
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Choose",
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Choose",
                         replyMarkup: _keyboardButtons.GetMenuButtons());
                 }
             }
@@ -151,7 +186,7 @@ namespace JarvisBot
         {
             if (message.Text.Contains("Курсы валют", StringComparison.CurrentCultureIgnoreCase))
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Выберите валюту",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Выберите валюту",
                     replyMarkup: _keyboardButtons.GetMoneyButtons());
             }
         }
@@ -167,8 +202,8 @@ namespace JarvisBot
                     _cancellationToken.Cancel();
 
                     _messageInProcess = true;
-                    var rateMessage = _exchangeRateLoder.RatesResponse(message.Text, _cancellationToken.Token);
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
+                    var rateMessage = await _exchangeRateLoder.RatesResponse(message.Text, _cancellationToken.Token);
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, rateMessage);
                     _messageInProcess = false;
                     _cancellationToken = new();
                 }
@@ -187,7 +222,7 @@ namespace JarvisBot
 
                 if (message.Text == "Auto 🔄️")
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Авто обновление курса валют ...",
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Авто обновление курса валют ...",
                         replyMarkup: _keyboardButtons.GetAutoRateButtons());
                 }
             }
@@ -205,14 +240,14 @@ namespace JarvisBot
 
                 if (message.Text == "Auto 💵 💷 💶")
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Обновление Курса валют ВКЛЮЧЕНО",
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Обновление Курса валют ВКЛЮЧЕНО",
                         replyMarkup: _keyboardButtons.GetAdminMenuButtons());
 
                     SetTimer(_cancellationToken.Token);
                 }
                 else if (message.Text == "Stop 🔄️")
                 {
-                    _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Авто обновление ВЫКЛЮЧЕНО",
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Авто обновление ВЫКЛЮЧЕНО",
                         replyMarkup: _keyboardButtons.GetMoneyButtons());
                     _cancellationToken.Cancel();
                 }
@@ -284,7 +319,7 @@ namespace JarvisBot
                         _messageInProcess = true;
 
                         _logger.Trace($"Rate for update - {rate}");
-                        updateRate = _exchangeRateLoder.EqualityCurrencyExchangeRate(rate, cancellationToken);
+                        updateRate = await _exchangeRateLoder.EqualityCurrencyExchangeRate(rate, cancellationToken);
 
                         await Task.Delay(10000, cancellationToken);
 
@@ -308,7 +343,7 @@ namespace JarvisBot
         public async Task HandleUpdateRatesAsync(ITelegramBotClient botClient, Message message, string rateMessage)
         {
             _logger.Info($"Rate is updating - {rateMessage}");
-            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, rateMessage);
+            _botMessage = await botClient.SendMessage(message.Chat.Id, rateMessage);
         }
 
         public async Task HandleWeatherAsync(ITelegramBotClient botClient, Message message)
@@ -316,7 +351,7 @@ namespace JarvisBot
             if (message.Text == "☂️ Погода")
             {
                 var weatuerMessage = _weatherLoder.WeatherResponse();
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, await weatuerMessage);
+                _botMessage = await botClient.SendMessage(message.Chat.Id, await weatuerMessage);
             }
         }
 
@@ -324,7 +359,7 @@ namespace JarvisBot
         {
             if (message.Text.Contains("🙋‍♂️ Help", StringComparison.CurrentCultureIgnoreCase) && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что-то включить?",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Что-то включить?",
                     replyMarkup: _keyboardButtons.GetHelpSubmenuButtons());
             }
         }
@@ -333,10 +368,10 @@ namespace JarvisBot
         {
             if (message.Text == "💻 Device" && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Вы в меню управления программой - [AnyDesk]",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Вы в меню управления программой - [AnyDesk]",
                     replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
 
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Что сделать с программой, Сэр?",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Что сделать с программой, Сэр?",
                     replyMarkup: _keyboardButtons.GetBackButtons());
             }
         }
@@ -345,12 +380,12 @@ namespace JarvisBot
         {
             if (callbackQuery.Data == "Start_AnyDesk")
             {
-                _botMessage = await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "AnyDesk включается...");
+                _botMessage = await botClient.SendMessage(_botMessage.Chat.Id, "AnyDesk включается...");
                 StartAnyDesk(botClient, _botMessage);
             }
             else if (callbackQuery.Data == "Cancel_AnyDesk")
             {
-                _botMessage = await botClient.SendTextMessageAsync(_botMessage.Chat.Id, "Выключение AnyDesk.", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
+                _botMessage = await botClient.SendMessage(_botMessage.Chat.Id, "Выключение AnyDesk.", replyMarkup: _keyboardButtons.GetAdminMenuButtons());
                 await StopAnyDesk(botClient, _botMessage);
             }
         }
@@ -376,12 +411,12 @@ namespace JarvisBot
 
                     if (Process.GetProcessesByName("AnyDesk").Any())
                     {
-                        _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk запущен");
+                        _botMessage = await botClient.SendMessage(message.Chat.Id, "AnyDesk запущен");
                         Console.WriteLine("AnyDesk запущен");
                     }
                     else
                     {
-                        _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Проблемы с запуском...");
+                        _botMessage = await botClient.SendMessage(message.Chat.Id, "Проблемы с запуском...");
                     }
                 }
                 catch (System.ComponentModel.Win32Exception ex)
@@ -391,7 +426,7 @@ namespace JarvisBot
             }
             else
             {
-                botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk уже запущен");
+                botClient.SendMessage(message.Chat.Id, "AnyDesk уже запущен");
                 Console.WriteLine("AnyDesk уже запущен");
             }
         }
@@ -407,17 +442,17 @@ namespace JarvisBot
 
             if (!Process.GetProcessesByName("AnyDesk").Any())
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "AnyDesk закрыт");
                 Console.WriteLine("AnyDesk закрыт");
             }
             else
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "... закрываем AnyDesk повторно");
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "... закрываем AnyDesk повторно");
                 Console.WriteLine("... закрываем AnyDesk повторно");
 
                 await CloseAnyDeskProcesses(botClient, message);
 
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрыт");
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "AnyDesk закрыт");
                 Console.WriteLine("AnyDesk закрыт");
             }
 
@@ -430,7 +465,7 @@ namespace JarvisBot
             {
                 process.Kill();
 
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "AnyDesk закрывается...");
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "AnyDesk закрывается...");
                 Console.WriteLine("AnyDesk закрывается...");
             }
         }
@@ -439,10 +474,10 @@ namespace JarvisBot
         {
             if (message.Text == "🛠️ Something" && message.Chat.Id == _adminChatId)
             {
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управления компьютером:",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управления компьютером:",
                     replyMarkup: _keyboardButtons.GetRebootButtons());
 
-                _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Еще не поздно вернуться назад, Сэр.",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Еще не поздно вернуться назад, Сэр.",
                     replyMarkup: _keyboardButtons.GetBackButtons());
             }
         }
@@ -453,24 +488,24 @@ namespace JarvisBot
 
             if (callbackQuery.Data == "PC_Reboot")
             {
-                _botMessage = await botClient.SendTextMessageAsync(chatId, "Ждите компьютер ПЕРЕЗАГРУЖАЕТСЯ...");
+                _botMessage = await botClient.SendMessage(chatId, "Ждите компьютер ПЕРЕЗАГРУЖАЕТСЯ...");
                 RebootPcClick(botClient, _botMessage);
             }
             else if (callbackQuery.Data == "PC_PowerOFF")
             {
-                _botMessage = await botClient.SendTextMessageAsync(chatId, "ВЫКЛЮЧЕНИЕ компьютера...");
+                _botMessage = await botClient.SendMessage(chatId, "ВЫКЛЮЧЕНИЕ компьютера...");
                 PowerOffPcClick(botClient, _botMessage);
             }
             else if (callbackQuery.Data == "PC_Lock")
             {
-                _botMessage = await botClient.SendTextMessageAsync(chatId, "Выключение экрана ...");
+                _botMessage = await botClient.SendMessage(chatId, "Выключение экрана ...");
                 LockPcClick(botClient, _botMessage);
             }
         }
 
         public async void RebootPcClick(ITelegramBotClient botClient, Message message)
         {
-            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Ждите Я скоро ..!");
+            _botMessage = await botClient.SendMessage(message.Chat.Id, "Ждите Я скоро ..!");
             Console.WriteLine("Ждите Я скоро ..!");
 
             string rebootPC = "shutdown";
@@ -480,8 +515,8 @@ namespace JarvisBot
 
         public async void PowerOffPcClick(ITelegramBotClient botClient, Message message)
         {
-            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "До скорого, сэр");
-            Console.WriteLine("До скорого, сэр");
+            _botMessage = await botClient.SendMessage(message.Chat.Id, "До скорого, Сэр");
+            Console.WriteLine("До скорого, Сэр");
 
             string powerOffPC = "shutdown";
             string arguments = "/s /f /t 0";
@@ -490,7 +525,7 @@ namespace JarvisBot
 
         public async void LockPcClick(ITelegramBotClient botClient, Message message)
         {
-            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, "Экран выключен, сер");
+            _botMessage = await botClient.SendMessage(message.Chat.Id, "Экран выключен, сер");
             Console.WriteLine("Экран выключен, сер");
 
             string lockPC = "Rundll32.exe";
@@ -507,9 +542,53 @@ namespace JarvisBot
             });
         }
 
+        public async Task HandleGetTasksForTodayAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text == "📋 На сегодня")
+            {
+                var emptyRequest = new TelegramEmptyRequest();
+                var tasks = await _grpcClient.TelegramGetTasksForTodayAsync(emptyRequest);
+
+                foreach (var telagramMessage in tasks.Messages)
+                {
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, telagramMessage,
+                    parseMode: ParseMode.Markdown);
+
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, "Проверяю список задач ...");
+                }
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "На сегодня все. \n Сэр !");
+            }
+        }
+
+        public async Task HandleGetTaskForWeekAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text == "📅 На неделю")
+            {
+                //var emptyRequest = new TelegramEmptyRequest();
+                //var tasks = await _grpcClient.TelegramGetTasksForTodayAsync(emptyRequest);
+
+                //foreach (var telagramMessage in tasks.Messages)
+                //{
+                //    _botMessage = await botClient.SendMessage(message.Chat.Id, telagramMessage,
+                //    parseMode: ParseMode.Markdown);
+                //}
+
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "Функция еще не реализована.\n Сэр !");
+            }
+        }
+
+        public async Task HandleChooseTasksButtonAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text == "📋 Задачи")
+            {
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "Какие задачи нужны, Сэр ?",
+                        replyMarkup: _keyboardButtons.GetTasksMenuButtons());
+            }
+        }
+
         public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)
         {
-            _botMessage = await botClient.SendTextMessageAsync(message.Chat.Id, text: "Я отправлю эту информацию в архив, Сэр !");
+            _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Я отправлю эту информацию в архив, Сэр !");
         }
     }
 }
