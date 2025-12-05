@@ -562,7 +562,9 @@ namespace JarvisBot
                     _botMessage = await botClient.SendMessage(message.Chat.Id, telagramMessage,
                     parseMode: ParseMode.Markdown);
 
-                    _botMessage = await botClient.SendMessage(message.Chat.Id, "смотрю еще ...");
+                    if (tasks.Messages.Count > 1) 
+                        _botMessage = await botClient.SendMessage(message.Chat.Id, "смотрю еще ...");
+
                 }
                 _botMessage = await botClient.SendMessage(message.Chat.Id, "На сегодня все. \nСэр !");
             }
