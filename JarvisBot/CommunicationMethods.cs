@@ -371,7 +371,7 @@ namespace JarvisBot
                 _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Вы в меню управления программой - [AnyDesk]",
                     replyMarkup: _keyboardButtons.GetStartAnyDeskButtons());
 
-                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Что сделать с программой, Сэр?",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Что сделать с программой, \nСэр?",
                     replyMarkup: _keyboardButtons.GetBackButtons());
             }
         }
@@ -477,7 +477,7 @@ namespace JarvisBot
                 _botMessage = await botClient.SendMessage(message.Chat.Id, text: "ВНИМАНИЕ !!! \r\nВы вошли в настройки управления компьютером:",
                     replyMarkup: _keyboardButtons.GetRebootButtons());
 
-                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Еще не поздно вернуться назад, Сэр.",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Еще не поздно вернуться назад, \nСэр.",
                     replyMarkup: _keyboardButtons.GetBackButtons());
             }
         }
@@ -515,7 +515,7 @@ namespace JarvisBot
 
         public async void PowerOffPcClick(ITelegramBotClient botClient, Message message)
         {
-            _botMessage = await botClient.SendMessage(message.Chat.Id, "До скорого, Сэр");
+            _botMessage = await botClient.SendMessage(message.Chat.Id, "До скорого, \nСэр");
             Console.WriteLine("До скорого, Сэр");
 
             string powerOffPC = "shutdown";
@@ -549,14 +549,22 @@ namespace JarvisBot
                 var emptyRequest = new TelegramEmptyRequest();
                 var tasks = await _grpcClient.TelegramGetTasksForTodayAsync(emptyRequest);
 
+                if (tasks.Tasks.Count == 0)
+                {
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, "На сегодня ничего не запланировано, \nСэр !");
+                    return;
+                }
+
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "Проверяю список задач ...");
+
                 foreach (var telagramMessage in tasks.Messages)
                 {
                     _botMessage = await botClient.SendMessage(message.Chat.Id, telagramMessage,
                     parseMode: ParseMode.Markdown);
 
-                    _botMessage = await botClient.SendMessage(message.Chat.Id, "Проверяю список задач ...");
+                    _botMessage = await botClient.SendMessage(message.Chat.Id, "смотрю еще ...");
                 }
-                _botMessage = await botClient.SendMessage(message.Chat.Id, "На сегодня все. \n Сэр !");
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "На сегодня все. \nСэр !");
             }
         }
 
@@ -573,7 +581,7 @@ namespace JarvisBot
                 //    parseMode: ParseMode.Markdown);
                 //}
 
-                _botMessage = await botClient.SendMessage(message.Chat.Id, "Функция еще не реализована.\n Сэр !");
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "Функция еще не реализована.\nСэр !");
             }
         }
 
@@ -581,14 +589,14 @@ namespace JarvisBot
         {
             if (message.Text == "📋 Задачи")
             {
-                _botMessage = await botClient.SendMessage(message.Chat.Id, "Какие задачи нужны, Сэр ?",
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "Какие задачи нужны, \nСэр ?",
                         replyMarkup: _keyboardButtons.GetTasksMenuButtons());
             }
         }
 
         public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)
         {
-            _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Я отправлю эту информацию в архив, Сэр !");
+            _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Я отправлю эту информацию в архив, \nСэр !");
         }
     }
 }
