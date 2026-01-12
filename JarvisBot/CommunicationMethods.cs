@@ -94,6 +94,7 @@ namespace JarvisBot
 
                 await HandleGetTasksForTodayAsync(botClient, message);
                 await HandleGetTaskForWeekAsync(botClient, message);
+                await HandleGetMenuFromBalukAsync(botClient, message);
 
                 if (_botMessage.Text == null || _botMessage.Text == string.Empty)
                 {
@@ -544,7 +545,7 @@ namespace JarvisBot
 
         public async Task HandleGetTasksForTodayAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "📋 На сегодня")
+            if (message.Text == "📋 Задачи дня")
             {
                 var emptyRequest = new TelegramEmptyRequest();
                 var tasks = await _grpcClient.TelegramGetTasksForTodayAsync(emptyRequest);
@@ -572,7 +573,7 @@ namespace JarvisBot
 
         public async Task HandleGetTaskForWeekAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "📅 На неделю")
+            if (message.Text == "📅 Задачи недели")
             {
                 //var emptyRequest = new TelegramEmptyRequest();
                 //var tasks = await _grpcClient.TelegramGetTasksForTodayAsync(emptyRequest);
@@ -587,9 +588,26 @@ namespace JarvisBot
             }
         }
 
+        public async Task HandleGetMenuFromBalukAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text == "🍔 Меню - Балука")
+            {
+                //var emptyRequest = new TelegramEmptyRequest();
+                //var tasks = await _grpcClient.TelegramGetTasksForTodayAsync(emptyRequest);
+
+                //foreach (var telagramMessage in tasks.Messages)
+                //{
+                //    _botMessage = await botClient.SendMessage(message.Chat.Id, telagramMessage,
+                //    parseMode: ParseMode.Markdown);
+                //}
+
+                _botMessage = await botClient.SendMessage(message.Chat.Id, "Функция под вопросом.\nСэр !");
+            }
+        }
+
         public async Task HandleChooseTasksButtonAsync(ITelegramBotClient botClient, Message message)
         {
-            if (message.Text == "📋 Задачи")
+            if (message.Text == "😎 Ассистент")
             {
                 _botMessage = await botClient.SendMessage(message.Chat.Id, "Какие задачи нужны, \nСэр ?",
                         replyMarkup: _keyboardButtons.GetTasksMenuButtons());
