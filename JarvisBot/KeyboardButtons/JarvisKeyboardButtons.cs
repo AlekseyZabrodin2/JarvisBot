@@ -11,7 +11,7 @@ namespace JarvisBot.KeyboardButtons
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
                     new KeyboardButton[] { "☂️ Погода", "💰 Курсы валют" },
-                    new KeyboardButton[] { "📋 Задачи" }
+                    new KeyboardButton[] { "😎 Ассистент" }
                 })
             {
                 ResizeKeyboard = true
@@ -24,7 +24,7 @@ namespace JarvisBot.KeyboardButtons
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
                     new KeyboardButton[] { "☂️ Погода", "💰 Курсы валют" },
-                    new KeyboardButton[] { "📋 Задачи", "🙋‍♂️ Help" }
+                    new KeyboardButton[] { "😎 Ассистент", "🙋‍♂️ Help" }
                 })
             {
                 ResizeKeyboard = true
@@ -36,8 +36,8 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] { "📋 На сегодня", "📅 На неделю" },
-                    new KeyboardButton[] {  "⬅️ Back" }
+                    new KeyboardButton[] { "📋 Задачи дня", "📅 Задачи недели" },
+                    new KeyboardButton[] { "🍔 Меню - Балука", "⬅️ Back" }
                 })
             {
                 ResizeKeyboard = true
