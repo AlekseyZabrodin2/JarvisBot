@@ -2,17 +2,27 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <UserSecretsId>2f7c9dea-bb3c-471d-8ecc-0f31c305ef69</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="DeskAssistant.Core" Version="1.4.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.10" />
     <PackageReference Include="NLog" Version="6.1.4" />
     <PackageReference Include="Telegram.Bot" Version="22.10.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JarvisBot.Core\JarvisBot.Core.csproj" />
+    <ProjectReference Include="..\JarvisBot.Engine\JarvisBot.Engine.csproj" />
+    <ProjectReference Include="..\JarvisBot.Storage\JarvisBot.Storage.csproj" />
   </ItemGroup>
 
   <ItemGroup>
