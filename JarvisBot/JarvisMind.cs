@@ -1,6 +1,12 @@
 ﻿using JarvisBot.Background;
+using JarvisBot.Core.Interfaces;
+using JarvisBot.Engine.Extensions;
 using JarvisBot.Exchange.AlfaBankInSyncRates;
+using JarvisBot.NotificationService;
 using JarvisBot.SecureService;
+using JarvisBot.Storage.Extensions;
+using JarvisBot.Storage.Initialization;
+using JarvisBot.Storage.Repositories;
 using JarvisBot.TasksFromGrpc;
 using JarvisBot.Weather;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +17,7 @@ using NLog;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Telegram.Bot;
 
 namespace JarvisBot
 {
@@ -22,6 +29,7 @@ namespace JarvisBot
         public JarvisClientSettings JarvisClientSettings { get; set; }
         public EncryptionSettings EncryptionSettings { get; set; }
         public GrpcConnectingSettings GrpcConnectingSettings { get; set; }
+        private const string PlaywrightBrowsersPath = @"D:\Develop\JarvisBot\PlaywrightBrowsers";
 
 
         private static async Task Main(string[] args)
@@ -30,6 +38,11 @@ namespace JarvisBot
 
             using (Mutex mutex = new Mutex(true, "MyApp", out bool isNewInstance))
             {
+                Environment.SetEnvironmentVariable("PLAYWRIGHT_BROWSERS_PATH", PlaywrightBrowsersPath);
+
+                _logger.Info($"Playwright browsers path: {PlaywrightBrowsersPath}");
+
+
                 using var tocen = new CancellationTokenSource();
 
                 if (!isNewInstance)
@@ -57,6 +70,7 @@ namespace JarvisBot
                 .ConfigureServices((context, services) =>
                 {
                     var configuration = context.Configuration;
+                    var connectionString = configuration.GetConnectionString("JarvisBot");
                     var env = context.HostingEnvironment;
 
                     services.AddSingleton<CommunicationMethods>();
@@ -65,10 +79,29 @@ namespace JarvisBot
                     services.AddSingleton<OldExchangeRates>();
                     services.AddSingleton<WeatherLoder>();
                     services.AddSingleton<EncryptionHelper>();
+                    services.AddSingleton<INotificationService, TelegramNotificationService>();
+                    services.AddScoped<IWatchTaskRepository, WatchTaskRepository>();
+                    services.AddScoped<IMonitoringResultRepository, MonitoringResultRepository>();
+
+                    services.AddSingleton<ITelegramBotClient>(sp =>
+                    {
+                        var settings = sp.GetRequiredService<JarvisClientSettings>();
+
+                        return new TelegramBotClient(
+                            settings.TelegramBotClient);
+                    });
 
                     services.Configure<JarvisClientSettings>(configuration.GetSection(nameof(JarvisClientSettings)));
                     services.Configure<EncryptionSettings>(configuration.GetSection(nameof(EncryptionSettings)));
                     services.Configure<GrpcConnectingSettings>(configuration.GetSection(nameof(GrpcConnectingSettings)));
+
+                    if (string.IsNullOrWhiteSpace(connectionString))
+                    {
+                        throw new InvalidOperationException(
+                            "PostgreSQL connection string 'JarvisBot' is not configured.");
+                    }
+                    services.AddJarvisBotStorage(connectionString);
+                    services.AddJarvisBotEngine();
 
                     var provider = services.BuildServiceProvider();
                     var encryption = provider.GetRequiredService<EncryptionHelper>();
@@ -106,15 +139,32 @@ namespace JarvisBot
                 })
                 .UseWindowsService()
                 .Build();
+
+                _logger.Info("Host successfully built.");
                 try
                 {
-                    _logger.Info("Begine RunAsync");
+                    using (var scope = host.Services.CreateScope())
+                    {
+                        var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
 
-                    await host.RunAsync();
+                        await initializer.InitializeAsync();
+                    }
+
+                    try
+                    {
+                        _logger.Info("Begine RunAsync");
+
+                        await host.RunAsync();
+                    }
+                    catch (Exception exeption)
+                    {
+                        _logger.Error($"Jarvis don`t started{exeption}");
+                        throw;
+                    }
                 }
-                catch (Exception exeption)
+                catch (Exception ex)
                 {
-                    _logger.Error($"Jarvis don`t started{exeption}");
+                    _logger.Error(ex, "JarvisBot failed to start.");
                     throw;
                 }
             }
