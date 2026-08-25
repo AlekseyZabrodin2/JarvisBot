@@ -1,7 +1,12 @@
 ﻿using Grpc.Net.Client;
 using JarvisBot.Background;
+using JarvisBot.Core.Enums;
+using JarvisBot.Core.Interfaces;
+using JarvisBot.Core.Models;
+using JarvisBot.Engine.Monitoring;
 using JarvisBot.Exchange.AlfaBankInSyncRates;
 using JarvisBot.KeyboardButtons;
+using JarvisBot.Models;
 using JarvisBot.TasksFromGrpc;
 using JarvisBot.Weather;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -37,7 +43,8 @@ namespace JarvisBot
         private TelegramService.TelegramServiceClient _grpcClient;
         private GrpcConnectingSettings _grpcConnectingSettings;
         private bool _messageInProcess;
-        IServiceProvider _serviceProvider;
+        IServiceProvider _serviceProvider; 
+        private readonly Dictionary<long, MonitoringCreationState> _monitoringCreationStates = new();
 
 
         public CommunicationMethods(JarvisClientSettings clientSettings, ExchangeRateLoder exchangeRateLoder, 
@@ -96,9 +103,21 @@ namespace JarvisBot
                 await HandleGetTaskForWeekAsync(botClient, message);
                 await HandleGetMenuFromBalukAsync(botClient, message);
 
-                if (_botMessage.Text == null || _botMessage.Text == string.Empty)
+                await HandleMonitoringTasksAsync(botClient, message, cancellationToken);
+                await HandleStartMonitoringAsync(botClient, message, cancellationToken);
+                await HandleStopMonitoringAsync(botClient, message, cancellationToken);
+                await HandleDeleteMonitoringAsync(botClient, message, cancellationToken);
+
+                var monitoringStarted = await HandleAddMonitoringAsync(botClient, message);
+
+                if (!monitoringStarted)
                 {
-                    await HandleUnknownMessageAsync(botClient, message);
+                    await HandleMonitoringCreationAsync(botClient, message, cancellationToken);
+                }
+
+                if (string.IsNullOrEmpty(_botMessage.Text) && !_monitoringCreationStates.ContainsKey(message.Chat.Id))
+                {
+                    //await HandleUnknownMessageAsync(botClient, message);
                 }
 
                 WriteAnswerInBotConsole(botUsername, _botMessage);
@@ -114,10 +133,14 @@ namespace JarvisBot
             }            
         }
 
-        public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query, User botUsername)
+        public async Task ProcessingCallback(ITelegramBotClient botClient, CallbackQuery query, User botUsername, CancellationToken cancellationToken)
         {
             await HandleStartAnyDeskAsync(botClient, query);
             await HandleRebootPCAsync(botClient, query);
+
+            await HandleMonitorStopCallbackQueryAsync(botClient, query, cancellationToken); 
+            await HandleMonitorStartCallbackQueryAsync(botClient, query);
+            await HandleMonitorDeleteCallbackQueryAsync(botClient, query);
 
             WriteAnswerInBotConsole(botUsername, _botMessage);
         }
@@ -617,6 +640,438 @@ namespace JarvisBot
         public async Task HandleUnknownMessageAsync(ITelegramBotClient botClient, Message message)
         {
             _botMessage = await botClient.SendMessage(message.Chat.Id, text: "Я отправлю эту информацию в архив, \nСэр !");
+        }
+
+        private async Task HandleMonitoringTasksAsync(ITelegramBotClient botClient, Message message,CancellationToken cancellationToken = default)
+        {
+            if (message.Text != "📋 Мониторинги")
+            {
+                return;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+
+            var repository = scope.ServiceProvider.GetRequiredService<IWatchTaskRepository>();
+
+            var tasks = await repository.GetAllAsync(cancellationToken);
+
+            if (tasks.Count == 0)
+            {
+                await botClient.SendMessage(message.Chat.Id, "📋 У вас пока нет мониторингов.", cancellationToken: cancellationToken);
+
+                return;
+            }
+
+            var builder = new StringBuilder();
+
+            builder.AppendLine("📋 Ваши мониторинги:");
+            builder.AppendLine();
+
+            foreach (var task in tasks)
+            {
+                var status = task.IsEnabled ? "🟢" : "🔴";
+
+                builder.AppendLine($"{status} {task.Name}");
+                builder.AppendLine($"🌐 {task.Url}");
+                builder.AppendLine($"🔎 {task.ConditionValue}");
+                builder.AppendLine($"⏱ Интервал: {task.Interval}");
+                builder.AppendLine();
+            }
+
+            await botClient.SendMessage(message.Chat.Id, builder.ToString(), 
+                            cancellationToken: cancellationToken,
+                            replyMarkup: _keyboardButtons.GetMonitoringMenuButtons());
+        }
+
+        private async Task<bool> HandleAddMonitoringAsync(ITelegramBotClient botClient, Message message)
+        {
+            if (message.Text != "➕ Добавить мониторинг")
+            {
+                return false;
+            }
+
+            _monitoringCreationStates[message.Chat.Id] =
+                new MonitoringCreationState
+                {
+                    Step = MonitoringCreationStep.WaitingForName
+                };
+
+            await botClient.SendMessage(message.Chat.Id,"➕ Создание мониторинга\n\nВведите название:");
+
+            return true;
+        }
+
+        private async Task HandleMonitoringCreationAsync(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken)
+        {
+            if (!_monitoringCreationStates.TryGetValue(message.Chat.Id, out var state))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(message.Text))
+            {
+                return;
+            }
+
+            if (message.Text.Equals("/cancel", StringComparison.OrdinalIgnoreCase))
+            {
+                _monitoringCreationStates.Remove(message.Chat.Id);
+
+                await botClient.SendMessage(message.Chat.Id, "❌ Создание мониторинга отменено.");
+
+                return;
+            }
+
+            switch (state.Step)
+            {
+                case MonitoringCreationStep.WaitingForName:
+                    state.Name = message.Text.Trim();
+                    state.Step = MonitoringCreationStep.WaitingForUrl;
+
+                    await botClient.SendMessage(message.Chat.Id, "Введите URL страницы:");
+
+                    break;
+
+                case MonitoringCreationStep.WaitingForUrl:
+
+                    if (!Uri.TryCreate(message.Text.Trim(), UriKind.Absolute, out var uri))
+                    {
+                        await botClient.SendMessage(message.Chat.Id,
+                            "❌ Некорректный URL.\n\n" +
+                            "Пример:\nhttps://example.com");
+
+                        return;
+                    }
+
+                    state.Url = uri.ToString();
+                    state.Step = MonitoringCreationStep.WaitingForCondition;
+
+                    await botClient.SendMessage(message.Chat.Id,
+                        "Что искать на странице?\n\n" +
+                        "Например: Example Domain");
+
+                    break;
+
+                case MonitoringCreationStep.WaitingForCondition:
+
+                    state.ConditionValue = message.Text.Trim();
+                    state.Step = MonitoringCreationStep.WaitingForInterval;
+
+                    await botClient.SendMessage(message.Chat.Id,
+                        "Введите интервал проверки в секундах.\n\n" +
+                        "Например: 60");
+
+                    break;
+
+                case MonitoringCreationStep.WaitingForInterval:
+
+                    if (!int.TryParse(message.Text.Trim(), out var seconds) || seconds <= 0)
+                    {
+                        await botClient.SendMessage(message.Chat.Id, "❌ Введите положительное число секунд.\n\n" +
+                            "Например: 60");
+
+                        return;
+                    }
+
+                    state.Interval = TimeSpan.FromSeconds(seconds);
+                    state.Step = MonitoringCreationStep.Confirming;
+
+                    await botClient.SendMessage(message.Chat.Id,
+                        $"Проверьте мониторинг:\n\n" +
+                        $"📌 {state.Name}\n" +
+                        $"🌐 {state.Url}\n" +
+                        $"🔎 {state.ConditionValue}\n" +
+                        $"⏱ {state.Interval}\n\n" +
+                        "Напишите «да» для создания или «нет» для отмены.");
+
+                    break;
+
+                case MonitoringCreationStep.Confirming:
+
+                    if (message.Text.Equals("нет", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _monitoringCreationStates.Remove(message.Chat.Id);
+
+                        await botClient.SendMessage( message.Chat.Id, "❌ Создание мониторинга отменено.");
+
+                        return;
+                    }
+
+                    if (!message.Text.Equals("да", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await botClient.SendMessage(message.Chat.Id, "Введите «да» или «нет».");
+
+                        return;
+                    }
+
+                    using (var scope = _serviceProvider.CreateScope())
+                    {
+                        var repository = scope.ServiceProvider.GetRequiredService<IWatchTaskRepository>();
+
+                        var task = new WatchTask
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = state.Name!,
+                            Url = new Uri(state.Url!),
+                            ConditionType = ConditionType.TextExists,
+                            ConditionValue = state.ConditionValue!,
+                            Interval = state.Interval!.Value,
+                            IsEnabled = true,
+                            CreatedAt = DateTimeOffset.UtcNow
+                        };
+
+                        await repository.AddAsync(task, cancellationToken);
+                    }
+
+                    _monitoringCreationStates.Remove(message.Chat.Id);
+
+                    await botClient.SendMessage(
+                        message.Chat.Id,
+                        $"✅ Мониторинг создан!\n\n" +
+                        $"📌 {state.Name}\n" +
+                        $"🌐 {state.Url}\n" +
+                        $"🔎 {state.ConditionValue}\n" +
+                        $"⏱ {state.Interval}\n\n" +
+                        "Мониторинг будет автоматически запущен.");
+
+                    break;
+            }
+        }
+
+        private async Task HandleStopMonitoringAsync(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken)
+        {
+            if (message.Text != "⏯️ Остановить мониторинг")
+            {
+                return;
+            }
+
+            await botClient.SendMessage(
+    message.Chat.Id,
+    "ТЕСТ: дошли до HandleStopMonitoringAsync");
+
+            using var scope = _serviceProvider.CreateScope();
+
+            var repository = scope.ServiceProvider.GetRequiredService<IWatchTaskRepository>();
+
+            var tasks = await repository.GetAllAsync(cancellationToken);
+
+            var enabledTasks = tasks
+                .Where(x => x.IsEnabled)
+                .ToList();
+
+            if (enabledTasks.Count == 0)
+            {
+                await botClient.SendMessage(message.Chat.Id, "⏯️ Нет запущенных мониторингов.", cancellationToken: cancellationToken);
+                return;
+            }
+
+            var keyboard = _keyboardButtons.GetStopMonitoringButtons(enabledTasks);
+
+            await botClient.SendMessage(message.Chat.Id, "⏯️ Выберите мониторинг для остановки:",
+                    replyMarkup: keyboard, cancellationToken: cancellationToken);
+        }
+
+        private async Task HandleMonitorStopCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery, CancellationToken cancellationToken)
+        {
+            if (callbackQuery.Data == null)
+            {
+                return;
+            }
+
+            if (callbackQuery.Data.StartsWith("monitor_stop:"))
+            {
+                await StopMonitoringAsync(
+                    botClient,
+                    callbackQuery,
+                    cancellationToken);
+
+                return;
+            }
+        }
+
+        private async Task HandleStartMonitoringAsync(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken)
+        {
+            if (message.Text != "⏩ Запустить мониторинг")
+            {
+                return;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+
+            var repository = scope.ServiceProvider.GetRequiredService<IWatchTaskRepository>();
+
+            var tasks = await repository.GetAllAsync(cancellationToken);
+
+            var disabledTasks = tasks
+                .Where(x => !x.IsEnabled)
+                .ToList();
+
+            if (disabledTasks.Count == 0)
+            {
+                await botClient.SendMessage(message.Chat.Id, "⏩ Нет остановленных мониторингов.", cancellationToken: cancellationToken);
+                return;
+            }
+
+            var keyboard = _keyboardButtons.GetStartMonitoringButtons(disabledTasks);
+
+            await botClient.SendMessage(message.Chat.Id, "⏩ Выберите мониторинг для запуска:",
+                replyMarkup: keyboard, cancellationToken: cancellationToken);
+        }
+
+        private async Task HandleMonitorStartCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery query)
+        {
+            if (query.Data is null || !query.Data.StartsWith("monitor_start:"))
+            {
+                return;
+            }
+
+            var idString = query.Data["monitor_start:".Length..];
+
+            if (!Guid.TryParse(idString, out var taskId))
+            {
+                await botClient.AnswerCallbackQuery(query.Id, "❌ Некорректный идентификатор мониторинга.");
+                return;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+
+            var repository = scope.ServiceProvider.GetRequiredService<IWatchTaskRepository>();
+
+            var task = await repository.GetByIdAsync(taskId);
+
+            if (task is null)
+            {
+                await botClient.AnswerCallbackQuery(query.Id, "❌ Мониторинг не найден.");
+                return;
+            }
+
+            if (task.IsEnabled)
+            {
+                await botClient.AnswerCallbackQuery(query.Id, "Мониторинг уже запущен.");
+                return;
+            }
+
+            task.IsEnabled = true;
+
+            await repository.UpdateAsync(task);
+
+            await botClient.AnswerCallbackQuery(query.Id, "▶️ Мониторинг запущен.");
+
+            await botClient.SendMessage(query.Message!.Chat.Id, $"▶️ Мониторинг запущен:\n\n📌 {task.Name}");
+        }
+
+        private async Task StopMonitoringAsync(ITelegramBotClient botClient, CallbackQuery callbackQuery, CancellationToken cancellationToken)
+        {
+            var taskIdString = callbackQuery.Data!.Replace("monitor_stop:", "");
+
+            if (!Guid.TryParse(taskIdString, out var taskId))
+            {
+                await botClient.AnswerCallbackQuery(callbackQuery.Id,
+                    "❌ Некорректный идентификатор задачи.",
+                    cancellationToken: cancellationToken);
+
+                return;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+
+            var repository = scope.ServiceProvider.GetRequiredService<IWatchTaskRepository>();
+
+            var task = await repository.GetByIdAsync(taskId, cancellationToken);
+
+            if (task == null)
+            {
+                await botClient.AnswerCallbackQuery(
+                    callbackQuery.Id,
+                    "❌ Мониторинг не найден.",
+                    cancellationToken: cancellationToken);
+
+                return;
+            }
+
+            if (!task.IsEnabled)
+            {
+                await botClient.AnswerCallbackQuery(
+                    callbackQuery.Id,
+                    "Мониторинг уже остановлен.",
+                    cancellationToken: cancellationToken);
+
+                return;
+            }
+
+            task.IsEnabled = false;
+
+            await repository.UpdateAsync(task, cancellationToken);
+
+            await botClient.AnswerCallbackQuery(callbackQuery.Id, "⏯️ Мониторинг остановлен.", cancellationToken: cancellationToken);
+
+            await botClient.SendMessage(
+                callbackQuery.Message!.Chat.Id,
+                $"⏹ Мониторинг остановлен:\n\n" +
+                $"📌 {task.Name}",
+                cancellationToken: cancellationToken);
+        }
+
+        private async Task HandleDeleteMonitoringAsync(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken)
+        {
+            if (message.Text != "➖ Удалить мониторинг")
+            {
+                return;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+
+            var repository =
+                scope.ServiceProvider.GetRequiredService<IWatchTaskRepository>();
+
+            var tasks = await repository.GetAllAsync(cancellationToken);
+
+            if (tasks.Count == 0)
+            {
+                await botClient.SendMessage(message.Chat.Id, "➖ Мониторингов нет.", cancellationToken: cancellationToken);
+
+                return;
+            }
+
+            var keyboard =_keyboardButtons.GetDeleteMonitoringButtons(tasks);
+
+            await botClient.SendMessage(message.Chat.Id, "➖ Выберите мониторинг для удаления:",
+                replyMarkup: keyboard, cancellationToken: cancellationToken);
+        }
+
+        private async Task HandleMonitorDeleteCallbackQueryAsync(ITelegramBotClient botClient, CallbackQuery query)
+        {
+            if (query.Data is null || !query.Data.StartsWith("monitor_delete:"))
+            {
+                return;
+            }
+
+            if (!Guid.TryParse(query.Data["monitor_delete:".Length..], out var taskId))
+            {
+                return;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+
+            var repository =
+                scope.ServiceProvider.GetRequiredService<IWatchTaskRepository>();
+
+            var task = await repository.GetByIdAsync(taskId);
+
+            if (task is null)
+            {
+                await botClient.SendMessage(query.Message!.Chat.Id, "❌ Мониторинг не найден.");
+
+                return;
+            }
+
+            var monitoringService = scope.ServiceProvider.GetRequiredService<MonitoringService>();
+
+            monitoringService.StopTask(task.Id);
+
+            await repository.DeleteAsync(task.Id);
+
+            await botClient.SendMessage(query.Message!.Chat.Id, $"➖ Мониторинг «{task.Name}» удалён.");
         }
     }
 }

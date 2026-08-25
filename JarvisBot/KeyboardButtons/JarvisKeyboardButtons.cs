@@ -1,4 +1,6 @@
-﻿using Telegram.Bot.Types.ReplyMarkups;
+﻿using JarvisBot.Core.Models;
+using System.Collections.Generic;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace JarvisBot.KeyboardButtons
 {
@@ -36,8 +38,22 @@ namespace JarvisBot.KeyboardButtons
         {
             ReplyKeyboardMarkup replyKeyboard = new(new[]
                 {
-                    new KeyboardButton[] { "📋 Задачи дня", "📅 Задачи недели" },
+                    new KeyboardButton[] { "📋 Задачи дня", "📋 Мониторинги" },
                     new KeyboardButton[] { "🍔 Меню - Балука", "⬅️ Back" }
+                })
+            {
+                ResizeKeyboard = true
+            };
+            return replyKeyboard;
+        }
+
+        public ReplyMarkup GetMonitoringMenuButtons()
+        {
+            ReplyKeyboardMarkup replyKeyboard = new(new[]
+                {
+                    new KeyboardButton[] { "➕ Добавить мониторинг", "⏯️ Остановить мониторинг" },
+                    new KeyboardButton[] { "⏩ Запустить мониторинг", "➖ Удалить мониторинг" },
+                    new KeyboardButton[] { "⬅️ Back" }
                 })
             {
                 ResizeKeyboard = true
@@ -138,6 +154,52 @@ namespace JarvisBot.KeyboardButtons
             return inlineKeyboard;
         }
 
+        public ReplyMarkup GetStopMonitoringButtons(List<WatchTask> tasks)
+        {
+            var buttons = new List<InlineKeyboardButton[]>();
 
+            foreach (var task in tasks)
+            {
+                buttons.Add(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(text: $"🟢 {task.Name}", callbackData: $"monitor_stop:{task.Id}")
+                });
+            }
+            return new InlineKeyboardMarkup(buttons);
+        }
+
+        public ReplyMarkup GetStartMonitoringButtons(List<WatchTask> tasks)
+        {
+            var buttons = new List<InlineKeyboardButton[]>();
+
+            foreach (var task in tasks)
+            {
+                buttons.Add(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        text: $"⏩ {task.Name}",
+                        callbackData: $"monitor_start:{task.Id}")
+                });
+            }
+
+            return new InlineKeyboardMarkup(buttons);
+        }
+
+        public ReplyMarkup GetDeleteMonitoringButtons(List<WatchTask> tasks)
+        {
+            var buttons = new List<InlineKeyboardButton[]>();
+
+            foreach (var task in tasks)
+            {
+                buttons.Add(new[]
+                {
+                    InlineKeyboardButton.WithCallbackData(
+                        text: $"➖ {task.Name}",
+                        callbackData: $"monitor_delete:{task.Id}")
+                });
+            }
+
+            return new InlineKeyboardMarkup(buttons);
+        }
     }
 }
