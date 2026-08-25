@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
+using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
@@ -17,7 +18,7 @@ namespace JarvisBot.Background
     class JarvisBackgroundService : BackgroundService
     {
 
-        TelegramBotClient _botClient;
+        ITelegramBotClient _botClient;
         private readonly ChatId _adminChatId;
         private User _botClientUsername = new();
         private readonly JarvisClientSettings _clientSettings;
@@ -29,12 +30,12 @@ namespace JarvisBot.Background
         private ILogger _logger = LogManager.GetCurrentClassLogger();
 
 
-        public JarvisBackgroundService(JarvisClientSettings clientSettings, CommunicationMethods communicationMethods)
+        public JarvisBackgroundService(JarvisClientSettings clientSettings, CommunicationMethods communicationMethods, ITelegramBotClient botClient)
         {
             _clientSettings = clientSettings;
             _communicationMethods = communicationMethods;
 
-            _botClient = new($"{_clientSettings.TelegramBotClient}");
+            _botClient = botClient;
             _adminChatId = new(_clientSettings.AdminChatId); 
         }
 
@@ -57,7 +58,14 @@ namespace JarvisBot.Background
 
                     await _botClient.SendMessage(_adminChatId, "К вашим услугам, сэр.", replyMarkup: _keyboardButtons.GetMenuButtons());
 
-                    _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, cancellationToken: tocen.Token);
+                    _botClient.StartReceiving(HandleUpdateAsync, HandlePollingErrorAsync, receiverOptions: new ReceiverOptions
+                    {
+                        AllowedUpdates = new[]
+                        {
+                            UpdateType.Message,
+                            UpdateType.CallbackQuery
+                        }
+                    }, cancellationToken: tocen.Token);
 
                     _logger.Info("Request was sent successfully, the connection is established");
                     Console.WriteLine("Программа запущена !!!");
@@ -75,6 +83,8 @@ namespace JarvisBot.Background
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            _logger.Info($"Telegram update received. Type=[{update.Type}], Id=[{update.Id}]");
+
             if (_connectionLost)
             {
                 _logger.Info("Connection restored!");
@@ -84,9 +94,12 @@ namespace JarvisBot.Background
             var message = update.Message;
             var callbackQuery = update.CallbackQuery;
 
-            if (update.Type == UpdateType.CallbackQuery)
+            if (update.Type == UpdateType.CallbackQuery &&
+                update.CallbackQuery != null)
             {
-                await _communicationMethods.ProcessingCallback(botClient, callbackQuery, _botClientUsername);
+                _logger.Info($"CallbackQuery received: [{update.CallbackQuery.Data}]");
+
+                await _communicationMethods.ProcessingCallback(botClient, callbackQuery, _botClientUsername, cancellationToken);
                 return;
             }
 
