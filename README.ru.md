@@ -81,17 +81,28 @@ dotnet run --project JarvisBot
 ### Установка как Windows Service
 Сервис можно развернуть как обычное .NET приложение, использующее `UseWindowsService()`.
 
+```
+
+!!! Подготовка Playwright браузеров !!!
+Playwright использует Chromium, поэтому перед установкой службы необходимо скачать браузеры.
+
+При запуске в дебаге браузеры установятся по пути - C:\Users\<твой_пользователь>\AppData\Local\ms-playwright\
+
+Браузеры необходимо перенести в директорию и указать константой в методе - private static async Task Main(string[] args) !!!
+
+```
+
 Вариант 1. С помощью `sc.exe` (после публикации):
 ```powershell
-dotnet publish JarvisBot -c Release -o .\publish
-sc create JarvisBot binPath= "C:\path\to\publish\JarvisBot.exe" start= auto
+dotnet publish JarvisBot -c Release -o .\publishJarvisBot
+sc create JarvisBot binPath= "C:\path\to\publishJarvisBot\JarvisBot.exe" start= auto
 sc start JarvisBot
 ```
 
 Вариант 2. С помощью PowerShell `New-Service`:
 ```powershell
-dotnet publish JarvisBot -c Release -o .\publish
-New-Service -Name JarvisBot -BinaryPathName "C:\path\to\publish\JarvisBot.exe" -StartupType Automatic
+dotnet publish JarvisBot -c Release -o .\publishJarvisBot
+New-Service -Name JarvisBot -BinaryPathName "C:\path\to\publishJarvisBot\JarvisBot.exe" -StartupType Automatic
 Start-Service JarvisBot
 ```
 

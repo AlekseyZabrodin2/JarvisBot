@@ -81,6 +81,19 @@ In Production, store sensitive `JarvisClientSettings` fields encrypted and decry
 ### Install as Windows Service
 App is built with `UseWindowsService()`.
 
+```
+
+Playwright Browser Setup
+
+Playwright uses Chromium, so the browsers must be downloaded before installing the application as a Windows Service.
+When running the application in Debug mode, the browsers are installed to:
+
+C:\Users\<your_username>\AppData\Local\ms-playwright\
+
+The browser files must be copied to the required directory and this path must be explicitly specified as a constant in the private static async Task Main(string[] args) method.
+
+```
+
 Option 1 — `sc.exe` (after publish):
 ```powershell
 dotnet publish JarvisBot -c Release -o .\publish
